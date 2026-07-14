@@ -1,0 +1,13 @@
+# ============================================================================
+# Configurador Maquina 232 - dependencias
+# ============================================================================
+# La interfaz (tkinter, csv) es de la biblioteca estandar de Python: no
+# necesita nada extra para el CRUD basico de recetas.
+#
+# openpyxl SI hace falta para la funcion "Importar cambios" (lee archivos
+# .xlsx). run.bat y build.bat lo instalan automaticamente.
+openpyxl>=3.1
+
+# El siguiente paquete se usa SOLO para generar el ejecutable portable.
+# build.bat lo instala automaticamente; se lista aca como referencia.
+pyinstaller>=6.0

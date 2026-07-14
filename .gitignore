@@ -1,0 +1,14 @@
+# Artefactos de compilación
+/build/
+/dist/
+*.spec
+
+# Datos de trabajo generados por la app junto al ejecutable
+/datos232/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
