@@ -1631,14 +1631,18 @@ class ImportDialog(tk.Toplevel):
         except Exception as exc:
             error(self, "Error al leer el Excel", str(exc))
             return
-        self.diffs, self.unmatched, self.unchanged = self._compute_diffs(rows)
+        self.diffs, self.new_records, self.obsolete, self.unchanged = \
+            self._compute_diffs(rows)
         self._show_diff_step()
 
     def _compute_diffs(self, rows: list[dict]):
         clave = self.profile.campo_clave()
         params = self.profile.parametros_visibles()
+        campos_mapeados = [c for c in self.profile.campos_visibles()
+                           if c.nombre_interno in self._mapped_fields]
         by_index: dict[int, dict] = {}
-        unmatched: list[str] = []
+        matched_indices: set[int] = set()
+        new_by_code: dict[str, dict] = {}
         unchanged = 0
 
         for raw in rows:
@@ -1655,10 +1659,19 @@ class ImportDialog(tk.Toplevel):
                              and self.store.signature(self.store.key_of(r)) == sig]
                     if len(cands) == 1:
                         idx, match_kind = cands[0], "approx"
+
             if idx == -1:
-                unmatched.append(code)
+                # Código del Excel que no existe en el catálogo: candidato a
+                # registro nuevo. Se toman todos los campos mapeados (no solo
+                # los parámetros) para poder crearlo completo.
+                valores = {c.nombre_interno: excel_import.normalize_value(
+                              raw.get(c.nombre_interno), c.tipo)
+                          for c in campos_mapeados}
+                valores[clave.nombre_interno] = code
+                new_by_code[code] = {"code": code, "valores": valores}
                 continue
 
+            matched_indices.add(idx)
             rec = self.store.records[idx]
             old_vals, new_vals, differs = {}, {}, False
             for c in params:
@@ -1673,8 +1686,20 @@ class ImportDialog(tk.Toplevel):
                                  "new": new_vals}
             else:
                 unchanged += 1
+
         diffs = sorted(by_index.values(), key=lambda d: d["code"].upper())
-        return diffs, unmatched, unchanged
+        new_records = sorted(new_by_code.values(), key=lambda d: d["code"].upper())
+
+        # Registros que están en el catálogo actual (no placeholders) pero
+        # cuyo código no apareció en el Excel: candidatos a obsoletos.
+        obsolete = []
+        for i, r in enumerate(self.store.records):
+            if i in matched_indices or self.store.is_placeholder(r):
+                continue
+            obsolete.append({"idx": i, "code": self.store.key_of(r)})
+        obsolete.sort(key=lambda d: d["code"].upper())
+
+        return diffs, new_records, obsolete, unchanged
 
     # -- paso diff -------------------------------------------------------------
     def _show_diff_step(self) -> None:
@@ -1683,71 +1708,117 @@ class ImportDialog(tk.Toplevel):
         partes = [f"{len(self.diffs)} con diferencias"]
         if self.unchanged:
             partes.append(f"{self.unchanged} sin cambios")
-        if self.unmatched:
-            partes.append(f"{len(self.unmatched)} no encontrados")
+        if self.new_records:
+            partes.append(f"{len(self.new_records)} código(s) nuevo(s)")
+        if self.obsolete:
+            partes.append(f"{len(self.obsolete)} código(s) no están en el Excel")
         tk.Label(self._content, bg=PANEL, fg=MUTED, font=FONT_SMALL, anchor="w",
                  text=" · ".join(partes)).pack(fill="x", padx=18, pady=(12, 4))
 
-        if not self.diffs:
+        if not self.diffs and not self.new_records and not self.obsolete:
             tk.Label(self._content, bg=PANEL, fg=TEXT, font=FONT,
-                     text="No hay registros con valores distintos.").pack(
-                padx=18, pady=20)
+                     text="No hay cambios para revisar.").pack(padx=18, pady=20)
             footer = tk.Frame(self._content, bg=PANEL, padx=18)
             footer.pack(fill="x", side="bottom", pady=14)
-            if self.unmatched:
-                button(footer, "Ver no encontrados", self._show_unmatched,
-                      kind="secondary").pack(side="left")
             button(footer, "Cerrar", self.destroy, kind="primary").pack(side="right")
             return
-
-        toolbar = tk.Frame(self._content, bg=PANEL, padx=18)
-        toolbar.pack(fill="x", pady=(0, 6))
-        self._diff_vars: dict[int, tk.BooleanVar] = {}
-        button(toolbar, "Seleccionar todos", lambda: self._set_all(True),
-              kind="ghost", small=True).pack(side="left")
-        button(toolbar, "Ninguno", lambda: self._set_all(False),
-              kind="ghost", small=True).pack(side="left", padx=(6, 0))
-        if self.unmatched:
-            button(toolbar, f"Ver no encontrados ({len(self.unmatched)})",
-                  self._show_unmatched, kind="secondary", small=True).pack(side="right")
 
         wrap = tk.Frame(self._content, bg=PANEL, padx=18)
         wrap.pack(fill="both", expand=True)
         canvas, inner = build_scrollable_canvas(self, wrap)
         params = [c for c in self.profile.parametros()
                  if c.nombre_interno in self._mapped_fields]
+        campos_mapeados = [c for c in self.profile.campos_visibles()
+                           if c.nombre_interno in self._mapped_fields]
 
-        for d in self.diffs:
-            card = tk.Frame(inner, bg=WHITE, highlightthickness=1,
-                            highlightbackground=BORDER)
-            card.pack(fill="x", pady=(0, 10), padx=(0, 14))
-            head = tk.Frame(card, bg=WHITE)
-            head.pack(fill="x", padx=12, pady=(8, 2))
-            var = tk.BooleanVar(value=False)
-            self._diff_vars[d["idx"]] = var
-            tb.Checkbutton(head, variable=var, bootstyle="success").pack(side="left")
-            title = d["code"]
-            if d["match_kind"] == "approx":
-                title += "  (coincidencia aproximada por ceros — revisar)"
-            tk.Label(head, text=title, bg=WHITE, fg=GREEN_DARK, font=FONT_BOLD,
-                     anchor="w").pack(side="left", fill="x", expand=True)
+        self._diff_vars: dict[int, tk.BooleanVar] = {}
+        self._new_vars: dict[str, tk.BooleanVar] = {}
+        self._obsolete_vars: dict[int, tk.BooleanVar] = {}
 
-            for c in params:
-                old = d["old"][c.nombre_interno]
-                new = d["new"][c.nombre_interno]
-                r = tk.Frame(card, bg=WHITE)
-                r.pack(fill="x", padx=12, pady=1)
-                tk.Label(r, text=c.titulo_ui, bg=WHITE, fg=MUTED, font=FONT_SMALL,
-                         width=18, anchor="w").pack(side="left")
-                if new is None:
-                    txt, col = f"{old}  (sin dato en Excel, no se modifica)", MUTED
-                elif new != old:
-                    txt, col = f"{old}  →  {new}", GREEN_DARK
-                else:
-                    txt, col = f"{old}", TEXT
-                fnt = FONT_BOLD if (new is not None and new != old) else FONT
-                tk.Label(r, text=txt, bg=WHITE, fg=col, font=fnt, anchor="w").pack(side="left")
-            tk.Frame(card, bg=WHITE, height=6).pack()
+        if self.diffs:
+            self._section_header(inner, "Modificaciones", GREEN_DARK,
+                                 self._diff_vars, lambda: self.diffs)
+            for d in self.diffs:
+                card = tk.Frame(inner, bg=WHITE, highlightthickness=1,
+                                highlightbackground=BORDER)
+                card.pack(fill="x", pady=(0, 10), padx=(0, 14))
+                head = tk.Frame(card, bg=WHITE)
+                head.pack(fill="x", padx=12, pady=(8, 2))
+                var = tk.BooleanVar(value=False)
+                self._diff_vars[d["idx"]] = var
+                tb.Checkbutton(head, variable=var, bootstyle="success").pack(side="left")
+                title = d["code"]
+                if d["match_kind"] == "approx":
+                    title += "  (coincidencia aproximada por ceros — revisar)"
+                tk.Label(head, text=title, bg=WHITE, fg=GREEN_DARK, font=FONT_BOLD,
+                         anchor="w").pack(side="left", fill="x", expand=True)
+
+                for c in params:
+                    old = d["old"][c.nombre_interno]
+                    new = d["new"][c.nombre_interno]
+                    r = tk.Frame(card, bg=WHITE)
+                    r.pack(fill="x", padx=12, pady=1)
+                    tk.Label(r, text=c.titulo_ui, bg=WHITE, fg=MUTED, font=FONT_SMALL,
+                             width=18, anchor="w").pack(side="left")
+                    if new is None:
+                        txt, col = f"{old}  (sin dato en Excel, no se modifica)", MUTED
+                    elif new != old:
+                        txt, col = f"{old}  →  {new}", GREEN_DARK
+                    else:
+                        txt, col = f"{old}", TEXT
+                    fnt = FONT_BOLD if (new is not None and new != old) else FONT
+                    tk.Label(r, text=txt, bg=WHITE, fg=col, font=fnt,
+                             anchor="w").pack(side="left")
+                tk.Frame(card, bg=WHITE, height=6).pack()
+
+        if self.new_records:
+            self._section_header(inner, "Códigos nuevos para agregar", AMBER,
+                                 self._new_vars, lambda: self.new_records,
+                                 key_fn=lambda d: d["code"])
+            for d in self.new_records:
+                card = tk.Frame(inner, bg=WHITE, highlightthickness=1,
+                                highlightbackground=BORDER)
+                card.pack(fill="x", pady=(0, 10), padx=(0, 14))
+                head = tk.Frame(card, bg=WHITE)
+                head.pack(fill="x", padx=12, pady=(8, 2))
+                var = tk.BooleanVar(value=False)
+                self._new_vars[d["code"]] = var
+                tb.Checkbutton(head, variable=var, bootstyle="success").pack(side="left")
+                tk.Label(head, text=d["code"], bg=WHITE, fg=AMBER, font=FONT_BOLD,
+                         anchor="w").pack(side="left", fill="x", expand=True)
+
+                for c in campos_mapeados:
+                    if c.es_clave:
+                        continue
+                    val = d["valores"].get(c.nombre_interno)
+                    r = tk.Frame(card, bg=WHITE)
+                    r.pack(fill="x", padx=12, pady=1)
+                    tk.Label(r, text=c.titulo_ui, bg=WHITE, fg=MUTED, font=FONT_SMALL,
+                             width=18, anchor="w").pack(side="left")
+                    txt = "(sin dato)" if val is None else str(val)
+                    tk.Label(r, text=txt, bg=WHITE, fg=TEXT, font=FONT,
+                             anchor="w").pack(side="left")
+                tk.Frame(card, bg=WHITE, height=6).pack()
+
+        if self.obsolete:
+            self._section_header(
+                inner, "Códigos del catálogo que no están en el Excel", RED_DARK,
+                self._obsolete_vars, lambda: self.obsolete)
+            tk.Label(inner, bg=PANEL, fg=MUTED, font=FONT_SMALL, anchor="w",
+                     wraplength=560, justify="left",
+                     text="Marcá los que quieras eliminar del catálogo por estar "
+                         "obsoletos. Los que dejes sin marcar se conservan tal "
+                         "cual están.").pack(fill="x", padx=2, pady=(0, 6))
+            for d in self.obsolete:
+                row = tk.Frame(inner, bg=WHITE, highlightthickness=1,
+                               highlightbackground=BORDER)
+                row.pack(fill="x", pady=(0, 6), padx=(0, 14))
+                var = tk.BooleanVar(value=False)
+                self._obsolete_vars[d["idx"]] = var
+                tb.Checkbutton(row, variable=var, bootstyle="danger").pack(
+                    side="left", padx=(8, 4), pady=6)
+                tk.Label(row, text=d["code"], bg=WHITE, fg=TEXT, font=FONT,
+                         anchor="w").pack(side="left", fill="x", expand=True, pady=6)
 
         footer = tk.Frame(self._content, bg=PANEL, padx=18)
         footer.pack(fill="x", side="bottom", pady=14)
@@ -1755,32 +1826,56 @@ class ImportDialog(tk.Toplevel):
         button(footer, "Aplicar seleccionados", self._on_apply, kind="primary").pack(
             side="right", padx=(0, 10))
 
-    def _set_all(self, value: bool) -> None:
-        for v in self._diff_vars.values():
-            v.set(value)
+    def _section_header(self, parent, title: str, color: str,
+                        vars_dict: dict, items_fn, key_fn=lambda d: d["idx"]) -> None:
+        head = tk.Frame(parent, bg=PANEL)
+        head.pack(fill="x", pady=(6, 6), padx=(0, 14))
+        tk.Label(head, text=title, bg=PANEL, fg=color, font=FONT_BOLD,
+                 anchor="w").pack(side="left")
+        button(head, "Todos", lambda: self._set_all(vars_dict, items_fn(), key_fn, True),
+              kind="ghost", small=True).pack(side="left", padx=(10, 0))
+        button(head, "Ninguno", lambda: self._set_all(vars_dict, items_fn(), key_fn, False),
+              kind="ghost", small=True).pack(side="left", padx=(2, 0))
 
-    def _show_unmatched(self) -> None:
-        preview = "\n".join(self.unmatched[:40])
-        if len(self.unmatched) > 40:
-            preview += f"\n… y {len(self.unmatched) - 40} más"
-        info(self, "Códigos no encontrados",
-            "Estos códigos del Excel no existen en el catálogo y se "
-            f"ignoraron:\n\n{preview}")
+    def _set_all(self, vars_dict: dict, items: list, key_fn, value: bool) -> None:
+        for d in items:
+            vars_dict[key_fn(d)].set(value)
 
     def _on_apply(self) -> None:
-        selected = [d for d in self.diffs if self._diff_vars[d["idx"]].get()]
-        if not selected:
-            info(self, "Sin selección", "No marcaste ningún registro para aplicar.")
+        sel_diffs = [d for d in self.diffs if self._diff_vars[d["idx"]].get()]
+        sel_new = [d for d in self.new_records if self._new_vars[d["code"]].get()]
+        sel_obsolete = [d for d in self.obsolete if self._obsolete_vars[d["idx"]].get()]
+
+        if not sel_diffs and not sel_new and not sel_obsolete:
+            info(self, "Sin selección", "No marcaste ningún cambio para aplicar.")
             return
-        preview = ", ".join(d["code"] for d in selected[:6])
-        if len(selected) > 6:
-            preview += " …"
-        if not confirm(self, "Confirmar importación",
-                       f"¿Aplicar {len(selected)} cambio(s)?\n\n{preview}"):
+
+        partes = []
+        if sel_diffs:
+            partes.append(f"{len(sel_diffs)} modificación(es)")
+        if sel_new:
+            partes.append(f"{len(sel_new)} código(s) nuevo(s)")
+        if sel_obsolete:
+            partes.append(f"{len(sel_obsolete)} código(s) a eliminar")
+
+        codes = [d["code"] for d in sel_diffs + sel_new + sel_obsolete]
+        preview = ", ".join(codes[:6]) + (" …" if len(codes) > 6 else "")
+        msg = f"¿Aplicar {', '.join(partes)}?"
+        if sel_obsolete:
+            msg += (f"\n\n¡Atención! Esto borra permanentemente "
+                    f"{len(sel_obsolete)} registro(s) del catálogo.")
+        msg += f"\n\n{preview}"
+        if not confirm(self, "Confirmar importación", msg):
             return
-        for d in selected:
+
+        for d in sel_diffs:
             cambios = {f: v for f, v in d["new"].items() if v is not None}
             self.store.update(d["idx"], cambios)
+        for d in sel_new:
+            self.store.add(self.store.nuevo_registro(d["valores"]))
+        for idx in sorted((d["idx"] for d in sel_obsolete), reverse=True):
+            self.store.delete(idx)
+
         self.applied_any = True
         self.destroy()
 
