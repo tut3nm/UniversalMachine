@@ -1,0 +1,172 @@
+{
+  "id": "111",
+  "nombre": "Prueba 2",
+  "descripcion": "",
+  "archivo_inicial": "record_EXPORT.csv",
+  "archivo": {
+    "extension": "csv",
+    "delimitador": ";",
+    "encoding": "utf-8",
+    "bom": false,
+    "fin_de_linea": "CRLF",
+    "orientacion": "columnas"
+  },
+  "estructura": {
+    "columna_etiquetas": 0,
+    "primera_columna_datos": 1,
+    "filas_fijas": [],
+    "fila_indice": null
+  },
+  "campos": [
+    {
+      "nombre_interno": "list_separator",
+      "rol": "parametro",
+      "fila": 0,
+      "etiqueta": "List separator=",
+      "tipo": "texto",
+      "titulo_ui": "List separator=",
+      "visible": false
+    },
+    {
+      "nombre_interno": "c_valvulas",
+      "rol": "parametro",
+      "fila": 1,
+      "etiqueta": "C.VALVULAS",
+      "tipo": "texto",
+      "titulo_ui": "C.VALVULAS",
+      "visible": false
+    },
+    {
+      "nombre_interno": "langid_409",
+      "rol": "clave",
+      "fila": 2,
+      "etiqueta": "LANGID_409",
+      "tipo": "texto",
+      "titulo_ui": "LANGID_409",
+      "visible": true
+    },
+    {
+      "nombre_interno": "1",
+      "rol": "parametro",
+      "fila": 3,
+      "etiqueta": "1",
+      "tipo": "entero",
+      "titulo_ui": "no sé",
+      "visible": true
+    },
+    {
+      "nombre_interno": "recetas_codigo",
+      "rol": "parametro",
+      "fila": 4,
+      "etiqueta": "RECETAS_CODIGO",
+      "tipo": "texto",
+      "titulo_ui": "RECETAS_CODIGO",
+      "visible": true
+    },
+    {
+      "nombre_interno": "recetas_cilindro",
+      "rol": "parametro",
+      "fila": 5,
+      "etiqueta": "RECETAS_CILINDRO",
+      "tipo": "texto",
+      "titulo_ui": "RECETAS_CILINDRO",
+      "visible": true
+    },
+    {
+      "nombre_interno": "recetas_diametro_int",
+      "rol": "parametro",
+      "fila": 6,
+      "etiqueta": "RECETAS_DIAMETRO_INT",
+      "tipo": "decimal",
+      "titulo_ui": "RECETAS_DIAMETRO_INT",
+      "visible": true,
+      "formato": {
+        "decimales": 0,
+        "separador_decimal": ","
+      }
+    },
+    {
+      "nombre_interno": "recetas_diametro_ext",
+      "rol": "parametro",
+      "fila": 7,
+      "etiqueta": "RECETAS_DIAMETRO_EXT",
+      "tipo": "decimal",
+      "titulo_ui": "RECETAS_DIAMETRO_EXT",
+      "visible": true,
+      "formato": {
+        "decimales": 0,
+        "separador_decimal": ","
+      }
+    },
+    {
+      "nombre_interno": "recetas_largo",
+      "rol": "parametro",
+      "fila": 8,
+      "etiqueta": "RECETAS_LARGO",
+      "tipo": "decimal",
+      "titulo_ui": "RECETAS_LARGO",
+      "visible": true,
+      "formato": {
+        "decimales": 0,
+        "separador_decimal": ","
+      }
+    },
+    {
+      "nombre_interno": "recetas_lanza",
+      "rol": "parametro",
+      "fila": 9,
+      "etiqueta": "RECETAS_LANZA",
+      "tipo": "texto",
+      "titulo_ui": "RECETAS_LANZA",
+      "visible": true
+    },
+    {
+      "nombre_interno": "recetas_pos_val",
+      "rol": "parametro",
+      "fila": 10,
+      "etiqueta": "RECETAS_POS_VAL",
+      "tipo": "texto",
+      "titulo_ui": "RECETAS_POS_VAL",
+      "visible": true
+    },
+    {
+      "nombre_interno": "recetas_pos_mesa",
+      "rol": "parametro",
+      "fila": 11,
+      "etiqueta": "RECETAS_POS_MESA",
+      "tipo": "decimal",
+      "titulo_ui": "RECETAS_POS_MESA",
+      "visible": true,
+      "formato": {
+        "decimales": 0,
+        "separador_decimal": ","
+      }
+    },
+    {
+      "nombre_interno": "recetas_fuerza",
+      "rol": "parametro",
+      "fila": 12,
+      "etiqueta": "RECETAS_FUERZA",
+      "tipo": "decimal",
+      "titulo_ui": "RECETAS_FUERZA",
+      "visible": true,
+      "formato": {
+        "decimales": 0,
+        "separador_decimal": ","
+      }
+    },
+    {
+      "nombre_interno": "recetas_prof_clavado",
+      "rol": "parametro",
+      "fila": 13,
+      "etiqueta": "RECETAS_PROF_CLAVADO",
+      "tipo": "decimal",
+      "titulo_ui": "RECETAS_PROF_CLAVADO",
+      "visible": true,
+      "formato": {
+        "decimales": 1,
+        "separador_decimal": "."
+      }
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 @echo off
 REM ============================================================================
-REM  run.bat  -  Ejecuta el Configurador Maquina 232 desde el codigo fuente.
-REM             Modo desarrollo: abre la app usando el Python instalado.
+REM  run.bat  -  Ejecuta el Configurador de Parametros de Planta desde el
+REM             codigo fuente. Modo desarrollo: usa el Python instalado.
 REM ============================================================================
 setlocal
 cd /d "%~dp0"
@@ -18,14 +18,20 @@ if not defined PYEXE (
   exit /b 1
 )
 
-echo Verificando dependencias (openpyxl, para "Importar cambios") ...
+echo Verificando dependencias (ttkbootstrap, openpyxl) ...
+%PYEXE% -m pip install --quiet ttkbootstrap
+if errorlevel 1 (
+  echo [ERROR] No se pudo instalar ttkbootstrap ^(necesario para la interfaz^).
+  pause
+  exit /b 1
+)
 %PYEXE% -m pip install --quiet openpyxl
 if errorlevel 1 (
   echo [AVISO] No se pudo instalar openpyxl. La app abrira igual, pero
   echo         "Importar cambios" no va a funcionar hasta instalarlo.
 )
 
-echo Iniciando Configurador Maquina 232 ...
+echo Iniciando Configurador de Parametros de Planta ...
 %PYEXE% "src\app.py"
 if errorlevel 1 (
   echo.

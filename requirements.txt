@@ -1,11 +1,14 @@
 # ============================================================================
-# Configurador Maquina 232 - dependencias
+# Configurador de Parametros de Planta - dependencias
 # ============================================================================
-# La interfaz (tkinter, csv) es de la biblioteca estandar de Python: no
-# necesita nada extra para el CRUD basico de recetas.
-#
-# openpyxl SI hace falta para la funcion "Importar cambios" (lee archivos
-# .xlsx). run.bat y build.bat lo instalan automaticamente.
+# La interfaz usa ttkbootstrap (liviana, ~1.7 MB, pura Python sin
+# dependencias compiladas) para dar un look moderno sobre tkinter/ttk
+# (que ya viene con Python). Es obligatoria para correr la app.
+ttkbootstrap>=1.10
+
+# openpyxl hace falta para la funcion "Importar cambios" (lee archivos
+# .xlsx). Si no esta instalado, el resto de la app funciona igual y esa
+# funcion avisa que falta el componente.
 openpyxl>=3.1
 
 # El siguiente paquete se usa SOLO para generar el ejecutable portable.

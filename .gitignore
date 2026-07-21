@@ -5,6 +5,11 @@
 
 # Datos de trabajo generados por la app junto al ejecutable
 /datos232/
+/datos/
+
+# Respaldos temporales de trabajo
+/_backup_pre_universal/
+/_safe_datos232_backup/
 
 # Python
 __pycache__/

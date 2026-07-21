@@ -1,0 +1,41 @@
+{
+  "id": "232",
+  "nombre": "Máquina 232 — Recetas",
+  "descripcion": "Calibración de aceite (Gramos de Carga) y velocidad (Velocidad Inicio) por pieza.",
+  "archivo_inicial": "recetas232.csv",
+
+  "archivo": {
+    "extension": "csv",
+    "delimitador": ",",
+    "encoding": "utf-8",
+    "bom": false,
+    "fin_de_linea": "CRLF",
+    "orientacion": "columnas"
+  },
+
+  "estructura": {
+    "columna_etiquetas": 0,
+    "primera_columna_datos": 1,
+    "filas_fijas": [
+      {"fila": 0, "celdas": ["List separator=", "Decimal symbol=."], "rellenar": true},
+      {"fila": 1, "celdas": ["Recipe_1 "], "rellenar": true}
+    ],
+    "fila_indice": {"fila": 3, "etiqueta": "3", "base": 1}
+  },
+
+  "campos": [
+    {"nombre_interno": "code",  "rol": "clave",     "fila": 2, "etiqueta": "LANGID_409",
+     "tipo": "texto",  "titulo_ui": "Código"},
+    {"nombre_interno": "color", "rol": "parametro", "fila": 4, "etiqueta": "Recetas_Datos Ingresados_Color",
+     "tipo": "entero", "titulo_ui": "Color", "min": 1, "max": 9, "default": 1},
+    {"nombre_interno": "grams", "rol": "parametro", "fila": 5, "etiqueta": "Recetas_Datos Ingresados_Gramos de Carga",
+     "tipo": "entero", "titulo_ui": "Gramos de Carga", "min": 0, "default": 0},
+    {"nombre_interno": "speed", "rol": "parametro", "fila": 6, "etiqueta": "Recetas_Datos Ingresados_Velocidad Inicio",
+     "tipo": "entero", "titulo_ui": "Velocidad Inicio", "min": 0, "default": 350}
+  ],
+
+  "features": {
+    "placeholder": {"patron": "^_DATA_\\d+$", "generar": "_DATA_{n}"},
+    "duplicados": {"metodo": "ignorar_ceros", "campo": "code"}
+  }
+}

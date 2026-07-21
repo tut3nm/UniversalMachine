@@ -18,9 +18,9 @@ if not defined PYEXE (
   exit /b 1
 )
 
-echo === Instalando dependencias (PyInstaller + openpyxl) ===
+echo === Instalando dependencias (PyInstaller + ttkbootstrap + openpyxl) ===
 %PYEXE% -m pip install --upgrade pip
-%PYEXE% -m pip install pyinstaller openpyxl
+%PYEXE% -m pip install pyinstaller ttkbootstrap openpyxl
 if errorlevel 1 (
   echo [ERROR] No se pudieron instalar las dependencias.
   pause
@@ -32,8 +32,10 @@ echo === Compilando ejecutable portable ===
 %PYEXE% -m PyInstaller ^
   --noconfirm --clean ^
   --onefile --windowed ^
-  --name "ConfiguradorMaquina232" ^
+  --name "ConfiguradorPlanta" ^
+  --collect-submodules ttkbootstrap ^
   --add-data "%~dp0recetas232.csv;." ^
+  --add-data "%~dp0profiles;profiles" ^
   --distpath "dist" ^
   --workpath "build\work" ^
   --specpath "build" ^
@@ -49,12 +51,12 @@ if errorlevel 1 (
 echo.
 echo ============================================================================
 echo  LISTO. Ejecutable portable generado en:
-echo     dist\ConfiguradorMaquina232.exe
+echo     dist\ConfiguradorPlanta.exe
 echo.
 echo  Copia ese .exe a cualquier PC con Windows y hace doble clic.
-echo  Al iniciar creara una carpeta "datos232" junto al .exe con:
-echo     - original.csv  (copia de fabrica, nunca se modifica)
-echo     - actual.csv    (archivo de trabajo con los ultimos cambios)
+echo  Al iniciar creara, junto al .exe:
+echo     - profiles\        (perfiles de maquina; se pueden agregar mas)
+echo     - datos\^<id^>\       (original + actual + meta.json por maquina)
 echo ============================================================================
 pause
 endlocal

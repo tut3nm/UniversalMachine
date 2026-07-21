@@ -16,6 +16,7 @@ encabezados, este módulo separa la lectura en dos pasos:
 
 from __future__ import annotations
 
+import difflib
 from dataclasses import dataclass
 
 import openpyxl
@@ -126,3 +127,83 @@ def normalize_int(raw: object) -> int | None:
         return int(round(float(text)))
     except ValueError:
         return None
+
+
+def normalize_decimal(raw: object) -> float | None:
+    if raw is None:
+        return None
+    if isinstance(raw, (int, float)):
+        return float(raw)
+    text = str(raw).strip().replace(",", ".")
+    if not text:
+        return None
+    try:
+        return float(text)
+    except ValueError:
+        return None
+
+
+def normalize_value(raw: object, tipo: str):
+    """Normaliza una celda según el tipo del campo del perfil. Los campos de
+    texto conservan ceros a la izquierda; los numéricos devuelven None si la
+    celda no aporta un valor (para no pisar el dato actual)."""
+    if tipo == "texto":
+        return normalize_code(raw)
+    if tipo == "decimal":
+        return normalize_decimal(raw)
+    return normalize_int(raw)
+
+
+# --- Mapeo genérico guiado por los campos del perfil -------------------------
+def guess_mapping_generic(headers: list[str], campos) -> dict[str, int | None]:
+    """Para cada campo del perfil, sugiere el índice de columna del Excel que
+    mejor coincide con su título/etiqueta/nombre. Usa coincidencia por
+    subcadena y, si no, similitud aproximada (difflib, stdlib). Asigna de
+    forma golosa por mejor puntaje y sin repetir columnas."""
+    norm_headers = [_strip_accents(h.lower()) for h in headers]
+
+    scored: list[tuple[float, str, int]] = []
+    for campo in campos:
+        terms = set()
+        for t in (campo.titulo_ui, campo.nombre_interno, campo.etiqueta):
+            for w in _strip_accents(str(t).lower()).replace("_", " ").split():
+                if len(w) >= 3:
+                    terms.add(w)
+        for hi, h in enumerate(norm_headers):
+            best = 0.0
+            for term in terms:
+                if term and (term in h or h in term):
+                    best = max(best, 0.92)
+                else:
+                    best = max(best, difflib.SequenceMatcher(None, term, h).ratio())
+            scored.append((best, campo.nombre_interno, hi))
+
+    scored.sort(reverse=True)
+    result: dict[str, int | None] = {}
+    usadas: set[int] = set()
+    for score, field, hi in scored:
+        if field in result or hi in usadas:
+            continue
+        if score >= 0.55:
+            result[field] = hi
+            usadas.add(hi)
+    for campo in campos:
+        result.setdefault(campo.nombre_interno, None)
+    return result
+
+
+def read_rows_generic(workbook, sheet: str,
+                      col_by_field: dict[str, int]) -> list[dict]:
+    """Lee las filas de datos devolviendo, por fila, un dict
+    {nombre_interno: valor_crudo} según el mapeo de columnas confirmado."""
+    ws = workbook[sheet]
+    max_col = max(col_by_field.values()) if col_by_field else 0
+    out: list[dict] = []
+    for raw in ws.iter_rows(min_row=2, values_only=True):
+        if raw is None or all(c is None for c in raw):
+            continue
+        rec = {}
+        for field, ci in col_by_field.items():
+            rec[field] = raw[ci] if ci is not None and ci < len(raw) else None
+        out.append(rec)
+    return out

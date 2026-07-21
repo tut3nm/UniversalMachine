@@ -1,12 +1,15 @@
-# Configurador Máquina 232
+# Configurador de Parámetros de Planta
 
-Aplicación de escritorio para editar el archivo de recetas (`.csv`) de la
-**máquina 232**: los parámetros de calibración de **cantidad de aceite**
-(*Gramos de Carga*) y **velocidad de operación** (*Velocidad Inicio*) de cada
-pieza que se produce en la planta.
+Aplicación de escritorio para editar los archivos de parámetros de las máquinas
+de la planta. Es **genérica**: cada máquina se describe con un **perfil JSON**
+que le dice a la app cómo leer y reconstruir su archivo (formato, columnas,
+parámetros). La primera máquina soportada es la **232** (calibración de aceite
+y velocidad), pero se pueden agregar más sin tocar el código.
 
-Interfaz simple en blanco / gris / verde hoja. Corre en cualquier PC con
-Windows, empaquetable como **un único `.exe` portable**.
+Interfaz simple en blanco / gris / verde hoja, con [ttkbootstrap](https://ttkbootstrap.readthedocs.io/)
+(liviana, ~1.7 MB, sin dependencias compiladas) para botones planos, tooltips
+en cada acción y notificaciones tipo "toast" al confirmar cambios. Corre en
+cualquier PC con Windows, empaquetable como **un único `.exe` portable**.
 
 ---
 
@@ -14,148 +17,125 @@ Windows, empaquetable como **un único `.exe` portable**.
 
 | Quiero… | Hago… |
 |---|---|
-| **Desarrollar / probar** en esta PC | Doble clic en **`run.bat`** (necesita Python 3 instalado) |
-| **Generar el portable** para distribuir | Doble clic en **`build.bat`** → genera `dist\ConfiguradorMaquina232.exe` |
-| **Usar el portable** en la planta | Copiar `ConfiguradorMaquina232.exe` a la PC y hacer doble clic |
+| **Desarrollar / probar** en esta PC | Doble clic en **`run.bat`** (necesita Python 3) |
+| **Generar el portable** para distribuir | Doble clic en **`build.bat`** → genera `dist\ConfiguradorPlanta.exe` |
+| **Usar el portable** en la planta | Copiar `ConfiguradorPlanta.exe` a la PC y hacer doble clic |
+
+El botón **🗂 Máquinas** (arriba a la derecha) siempre está disponible: abre el
+navegador de documentos de configuración, marca cuál es la máquina activa, y
+desde ahí también se agregan máquinas nuevas.
 
 ---
 
 ## Qué hace la aplicación
 
-- **Tabla** con todas las piezas y sus parámetros: `Código`, `Color`,
-  `Gramos de Carga`, `Velocidad Inicio`.
-- **Buscador** por código para encontrar un registro al instante.
-- **Nuevo / Editar / Eliminar** registros (los nuevos se agregan al final).
-- **Duplicados**: agrupa códigos que coinciden al ignorar los dígitos `0`
-  (p. ej. `00049810005962` y `004981005962`), típico de errores de relleno de
-  ceros al cargar piezas. Se muestran en grupos con acciones por registro:
-  - **Copiar código** → lo copia al portapapeles para buscarlo en SAP y
-    confirmar si existe de verdad.
-  - **No es duplicado** → lo marca como revisado y lo excluye de futuras
-    búsquedas de duplicados (no se borra, sigue en el catálogo).
-  - Check + **Eliminar seleccionados** → borra del catálogo los que sí son
-    duplicados reales.
-  La marca "no es duplicado" se guarda en una fila extra dentro de
-  `datos232/actual.csv`, propia de esta app: **nunca se incluye** al exportar
-  el CSV para el HMI, que siempre mantiene el formato original de 7 filas de
-  la máquina (ver más abajo).
-- **Importar cambios**: lee un Excel (`.xlsx`/`.xlsm`) de **formato variable**
-  (columnas en cualquier orden o con cualquier nombre) y lo compara contra el
-  catálogo actual:
-  1. Si el libro tiene varias hojas, primero pregunta cuál usar.
-  2. Pide mapear qué columna del Excel es Código, Color, Gramos de Carga y
-     Velocidad Inicio (sugiere un mapeo automático según el nombre de
-     encabezado, pero el usuario lo confirma).
-  3. Busca los registros cuyo código coincide y compara Color/Gramos/Velocidad;
-     si el Excel guardó el código como número y perdió ceros a la izquierda,
-     también intenta una coincidencia aproximada (avisando que la revises).
-  4. Muestra solo los registros que **difieren**, con el valor actual y el
-     nuevo lado a lado, para que el usuario marque cuáles aplicar — igual que
-     en "Duplicados", nada se cambia automáticamente. Las celdas vacías del
-     Excel no pisan el valor actual de ese campo.
-- **Guardado automático**: cada cambio se guarda en `datos232/actual.csv`.
-- **Exportar** el CSV a cualquier carpeta de la PC, en el **formato exacto**
-  del archivo original de la máquina:
-  - *CSV actual* → con los últimos cambios.
-  - *CSV original* → copia de fábrica sin alterar.
-- **Restaurar original**: descarta los cambios y vuelve al archivo de fábrica.
+- **Tabla dinámica**: las columnas salen del perfil de la máquina elegida.
+- **Buscador** por el código/identificador de cada registro (Ctrl+F).
+- **Nuevo / Editar / Eliminar** registros (campos del diálogo según el perfil).
+- **Duplicados** (si el perfil lo activa): agrupa códigos parecidos, permite
+  **copiar el código** para buscarlo en SAP, marcar **"No es duplicado"** o
+  eliminar los que sí lo sean.
+- **Importar cambios**: lee un Excel de formato variable, mapea sus columnas a
+  los campos del perfil (sugerencia automática por nombre) y muestra solo los
+  registros que difieren para que elijas cuáles aplicar. El mapeo es
+  **parcial**: solo el código es obligatorio, el resto de los datos es
+  opcional (podés dejar "no importar" en los que ese Excel no trae, por
+  ejemplo si solo cambian los "Gramos de Carga" y no el "Color" ni la
+  "Velocidad") — los campos no mapeados nunca se comparan ni se modifican.
+- **Guardado automático** y **Exportar** el archivo actual u original a
+  cualquier carpeta, siempre en el **formato exacto** que espera la máquina.
+- **Restaurar original**.
 
-Por defecto la tabla muestra solo las piezas reales. El casillero
-*"Mostrar slots vacíos (_DATA_)"* revela los espacios reservados que trae el
-archivo de la máquina.
+### Sobre la interfaz
+
+- Cada botón de la barra de herramientas tiene un **tooltip** (pasar el mouse
+  por encima) que explica qué hace y su atajo de teclado, si tiene.
+- Los botones están agrupados por función — alta de datos (Nuevo/Editar/Eliminar),
+  calidad de datos (Duplicados/Importar) y archivo (Exportar/Restaurar) —
+  separados visualmente para que sea fácil ubicar cada acción de un vistazo.
+- Las confirmaciones (guardar, exportar, importar) aparecen como una
+  **notificación breve** en la esquina, sin interrumpir con un cuadro de
+  diálogo modal; las acciones que sí requieren confirmación (eliminar,
+  restaurar) siguen preguntando antes de aplicarse.
 
 ---
 
-## Archivos permanentes
-
-Al iniciar, la app crea una carpeta **`datos232`** junto al ejecutable con:
-
-| Archivo | Rol |
-|---|---|
-| `original.csv` | Copia del archivo de fábrica. **La app nunca lo modifica.** |
-| `actual.csv`   | Archivo de trabajo con los últimos cambios. |
-
-Ambos se pueden exportar desde el botón **Exportar**.
-
----
-
-## Estructura del proyecto
+## Cómo funciona (arquitectura)
 
 ```
-máquina232/
-├─ recetas232.csv               Archivo fuente (limpio, queda embebido en el .exe)
-├─ recetas232_backup_original.csv  Copia del CSV de fábrica tal cual llegó, sin limpiar
+proyecto/
+├─ profiles/                  Perfiles de máquina (JSON). Se pueden agregar más.
+│  └─ maquina_232.json
+├─ recetas232.csv             Archivo de muestra embebido para sembrar la 232.
 ├─ src/
-│  ├─ app.py           Interfaz (Tkinter) + lógica de la ventana
-│  ├─ recipe_store.py  Carga/guardado fiel al formato de la máquina 232
-│  └─ excel_import.py  Lectura de Excel de formato variable (openpyxl)
-├─ run.bat             Ejecuta la app desde el código fuente (desarrollo)
-├─ build.bat           Genera el .exe portable con PyInstaller
-├─ requirements.txt    Dependencias (openpyxl + PyInstaller)
-└─ README.md
+│  ├─ profile.py              Carga y valida el perfil JSON.
+│  ├─ datastore.py            Motor genérico: lee/reconstruye byte-fiel según perfil.
+│  ├─ metadata.py             Sidecar de metadatos de la app (no toca el CSV).
+│  ├─ excel_import.py         Importación desde Excel (mapeo por perfil, difflib).
+│  ├─ profile_builder.py      Genera un perfil borrador a partir de un CSV adjuntado.
+│  ├─ paths.py                Rutas de perfiles y datos (dev y empaquetado).
+│  └─ app.py                  Interfaz Tkinter con UI dinámica + selector de máquina.
+├─ tests/
+│  └─ test_engine.py          Red de seguridad (round-trip byte-perfecto, CRUD, etc.)
+├─ run.bat / build.bat
+└─ datos/<id_maquina>/        Generado por la app: original + actual + meta.json
 ```
 
-### Limpieza aplicada al `recetas232.csv` fuente
+**Clave de diseño:** el archivo que se sube al HMI se reconstruye *byte por byte*
+igual al original (verificado por `tests/test_engine.py`). Los metadatos propios
+de la app (marca "no es duplicado", etc.) viven en `datos/<id>/meta.json`, un
+archivo aparte que **nunca** se mezcla con el CSV de la máquina.
 
-El archivo de fábrica original (conservado intacto en
-`recetas232_backup_original.csv`) tenía 1743 columnas, de las cuales 1070 eran
-slots vacíos `_DATA_N` sin usar. Sobre el archivo fuente (`recetas232.csv`) se
-aplicó:
+### Anatomía de un perfil
 
-1. **Eliminación de slots vacíos** `_DATA_N` → quedaron las 673 piezas reales.
-2. **Códigos duplicados por relleno de ceros** → quedan sin resolver a propósito;
-   se revisan interactivamente con el botón **Duplicados** de la app, porque
-   requieren criterio humano (piezas con "código parecido" pueden tener
-   parámetros muy distintos y no ser duplicados reales).
-3. **Orden alfabético ascendente** (sin distinguir mayúsculas/minúsculas) y
-   **renumeración de posiciones** (fila 3 del CSV), para que el catálogo sea
-   más fácil de navegar.
+Un perfil describe el formato sin cablearlo en el código. El de la 232
+(`profiles/maquina_232.json`) declara: orientación (transpuesta), delimitador,
+encoding, fin de línea, las filas fijas de metadatos, la fila de índice, y cada
+campo (`code`, `color`, `grams`, `speed`) con su ubicación, tipo y título. El
+motor soporta también archivos **normales** (fila por registro), listos para
+cuando aparezca el formato de otra máquina.
 
----
+Ejecutá `py tests/test_engine.py` para correr la red de seguridad.
 
-## Formato del CSV de la máquina 232
+### Agregar una máquina nueva
 
-El archivo es **transpuesto**: cada **columna** es una pieza y cada **fila** un
-parámetro. Son 7 filas, delimitadas por `,`, con saltos de línea `CRLF` y sin BOM:
+Desde **🗂 Máquinas → ➕ Agregar máquina**: adjuntás el CSV de la máquina,
+elegís si es "fila por pieza" (CSV normal, con encabezado) o "columna por
+pieza" (transpuesto, como la 232 — pidiendo en qué fila está el código), y la
+app:
 
-```
-List separator=,Decimal symbol=.,,,,,…        (metadatos)
-Recipe_1 ,,,,,…                                (nombre de la receta)
-LANGID_409,<código1>,<código2>,…              (código de cada pieza)
-3,1,2,3,…                                       (posición secuencial)
-Recetas_Datos Ingresados_Color,<v1>,<v2>,…
-Recetas_Datos Ingresados_Gramos de Carga,<v1>,<v2>,…
-Recetas_Datos Ingresados_Velocidad Inicio,<v1>,<v2>,…
-```
+1. Detecta automáticamente delimitador, codificación y fin de línea del archivo.
+2. Genera un **perfil borrador** (`profiles/maquina_<id>.json`) con un campo
+   por cada columna/fila detectada (nombre, tipo `entero`/`decimal`/`texto`
+   adivinado por muestreo).
+3. Crea `datos/<id>/` y siembra `original.csv` / `actual.csv` con el archivo
+   adjuntado.
 
-La aplicación reconstruye este formato byte por byte al exportar, para que el
-archivo resultante sea idéntico en estructura al que espera la máquina.
-
-### Fila extra interna (solo en `datos232/actual.csv`)
-
-El archivo de trabajo (`datos232/actual.csv`) tiene una **8ª fila** que no
-existe en el formato de la máquina:
-
-```
-Configurador232_RevisadoNoDuplicado,0,1,0,0,…
-```
-
-Marca qué códigos el usuario ya revisó y confirmó que **no** son duplicados
-(ver función **Duplicados**). Es exclusiva de esta app:
-
-- `original.csv` nunca la tiene (es copia intacta del CSV de fábrica).
-- Al usar **Exportar → CSV actual**, la app genera el archivo con el formato
-  original de 7 filas, sin esta fila extra — es el que hay que subir al HMI.
-- Si abrís un `actual.csv` viejo de 7 filas (de antes de esta función), la
-  app lo carga igual y asume que ningún registro fue revisado todavía.
+Esto es un punto de partida **funcional pero aproximado**: no distingue filas
+de metadatos fijos, IDs, etc. — eso lo termina de ajustar un ingeniero editando
+el JSON a mano (ver la anatomía de un perfil arriba), o el **asistente visual
+paso a paso** que se construirá más adelante, cuando haya archivos de
+referencia de más máquinas para validar ese diseño contra un caso real.
 
 ---
 
 ## Requisitos
 
-- **Para el `.exe` portable:** nada. Es autónomo (incluye openpyxl embebido).
+- **Para el `.exe` portable:** nada. Es autónomo (incluye ttkbootstrap,
+  openpyxl y los perfiles).
 - **Para desarrollo / build:** [Python 3](https://www.python.org/downloads/)
-  (marcar *"Add Python to PATH"* al instalar). Tkinter viene incluido;
-  `run.bat` y `build.bat` instalan `openpyxl` automáticamente la primera vez.
-  Si falta, la app funciona igual pero "Importar cambios" avisa que no está
-  disponible.
+  (marcar *"Add Python to PATH"*). Tkinter viene incluido; `run.bat` y
+  `build.bat` instalan `ttkbootstrap` y `openpyxl` automáticamente.
+  Sin `ttkbootstrap` la app no arranca (es la base de la interfaz); sin
+  `openpyxl` arranca igual pero "Importar cambios" avisa que falta.
+
+---
+
+## Datos históricos de la 232
+
+- `recetas232.csv` — archivo fuente limpio (673 piezas, embebido en el `.exe`).
+- `recetas232_backup_original.csv` — CSV de fábrica tal cual llegó (con los 1070
+  slots vacíos `_DATA_N`), por si hace falta volver al origen.
+- Si existía una carpeta `datos232/` de una versión anterior, la app la **migra
+  automáticamente** a `datos/232/` la primera vez (y pasa las marcas de
+  "no es duplicado" al nuevo `meta.json`).
