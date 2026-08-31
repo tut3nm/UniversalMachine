@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, type BackupInfo } from "../api";
+import Header from "../components/Header";
 
 export default function Backups() {
   const { id } = useParams<{ id: string }>();
@@ -18,52 +19,71 @@ export default function Backups() {
 
   useEffect(cargar, [id]);
 
-  const onRestaurar = async (nombre: string) => {
+  const onRestaurar = async (nombre: string, fechaLegible: string) => {
     if (!id) return;
-    if (!confirm(`¿Restaurar el backup "${nombre}"? Esto reemplaza el archivo actual (se guarda un backup del estado actual antes).`))
+    if (
+      !confirm(
+        `¿Restaurar el backup del ${fechaLegible}? Esto reemplaza el archivo actual (se guarda un backup del estado actual antes).`,
+      )
+    )
       return;
     try {
       await api.restaurarBackup(id, nombre);
-      setMensaje(`Restaurado: ${nombre}`);
+      setMensaje("Backup restaurado correctamente.");
       cargar();
     } catch (e) {
       setError(String(e));
     }
   };
 
-  if (error) return <p className="error">Error: {error}</p>;
-  if (!id || !backups) return <p>Cargando…</p>;
-
   return (
     <div>
-      <p>
-        <Link to={`/maquinas/${id}`}>← Máquina {id}</Link>
+      <Header />
+      <p className="breadcrumbs">
+        <Link to="/">Máquinas</Link>
+        <span className="sep">/</span>
+        <Link to={`/maquinas/${id}`}>Máquina {id}</Link>
+        <span className="sep">/</span>
+        <strong>Backups</strong>
       </p>
-      <h1>Backups — {id}</h1>
-      {mensaje && <p>{mensaje}</p>}
-      {backups.length === 0 ? (
-        <p>Todavía no hay backups (se crean automáticamente antes de cada guardado).</p>
+      <h1>Backups</h1>
+      <p className="muted">Se crea uno automáticamente antes de cada guardado.</p>
+
+      {error && <p className="error">{error}</p>}
+      {mensaje && <p className="badge badge-ok">{mensaje}</p>}
+
+      {!backups ? (
+        <p>Cargando…</p>
+      ) : backups.length === 0 ? (
+        <div className="empty-state">Todavía no hay backups.</div>
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Tamaño</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {backups.map((b) => (
-              <tr key={b.nombre}>
-                <td>{new Date(b.timestamp).toLocaleString()}</td>
-                <td>{(b.tamano_bytes / 1024).toFixed(1)} KB</td>
-                <td>
-                  <button onClick={() => onRestaurar(b.nombre)}>Restaurar este backup</button>
-                </td>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Tamaño</th>
+                <th></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {backups.map((b) => (
+                <tr key={b.nombre}>
+                  <td>{new Date(b.timestamp).toLocaleString()}</td>
+                  <td className="muted">{(b.tamano_bytes / 1024).toFixed(1)} KB</td>
+                  <td>
+                    <button
+                      className="btn-secondary btn-small"
+                      onClick={() => onRestaurar(b.nombre, new Date(b.timestamp).toLocaleString())}
+                    >
+                      Restaurar este backup
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
