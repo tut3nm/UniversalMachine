@@ -7,6 +7,11 @@ export default function Header() {
         <span className="brand-mark">Configurador de Planta</span>
         <span className="brand-sub">Recetas y parámetros de máquina</span>
       </Link>
+      <nav>
+        <Link to="/mediciones" className="btn btn-secondary">
+          Tabular mediciones
+        </Link>
+      </nav>
     </header>
   );
 }

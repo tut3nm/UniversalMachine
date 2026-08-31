@@ -3,6 +3,7 @@ import Backups from "./pages/Backups";
 import Dashboard from "./pages/Dashboard";
 import Historial from "./pages/Historial";
 import MaquinaDetalle from "./pages/MaquinaDetalle";
+import Mediciones from "./pages/Mediciones";
 import "./App.css";
 
 export default function App() {
@@ -13,6 +14,7 @@ export default function App() {
         <Route path="/maquinas/:id" element={<MaquinaDetalle />} />
         <Route path="/maquinas/:id/backups" element={<Backups />} />
         <Route path="/maquinas/:id/historial" element={<Historial />} />
+        <Route path="/mediciones" element={<Mediciones />} />
       </Routes>
     </BrowserRouter>
   );

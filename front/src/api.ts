@@ -77,7 +77,35 @@ export const api = {
     }),
   listarHistorial: (id: string) => req<EventoHistorial[]>(`/api/maquinas/${id}/historial`),
   diferencias: (id: string) => req<{ diffs: DiffRegistro[] }>(`/api/maquinas/${id}/diferencias`),
+  estadoIA: () => req<{ disponible: boolean; mensaje: string }>("/api/mediciones/estado"),
+  procesarMediciones: async (
+    archivo: File,
+    anotaciones: File | null,
+    useAi: boolean,
+  ): Promise<ResultadoMediciones> => {
+    const form = new FormData();
+    form.append("archivo", archivo);
+    if (anotaciones) form.append("anotaciones", anotaciones);
+    form.append("use_ai", String(useAi));
+    const res = await fetch(`${BASE}/api/mediciones/procesar`, { method: "POST", body: form });
+    if (!res.ok) {
+      const detail = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(detail.detail ?? `Error ${res.status}`);
+    }
+    return res.json();
+  },
 };
+
+export interface ResultadoMediciones {
+  out_filename: string;
+  records: number;
+  fields: number;
+  configs: number;
+  period: number;
+  unparsed: number;
+  ai_messages: string[];
+  download_url: string;
+}
 
 export interface BackupInfo {
   nombre: string;
