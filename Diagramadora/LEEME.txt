@@ -1,0 +1,74 @@
+CONVERSOR DE ENSAYOS DE AMORTIGUADORES A EXCEL
+================================================
+
+QUE ES
+------
+Un programa que toma el archivo .txt que entrega la maquina de ensayos de
+Fuerza-Velocidad y arma un Excel ordenado con:
+  - Hoja "Resumen": tolerancias, carrera, velocidades, fechas y totales OK/NOK.
+  - Hoja "Mediciones": una fila por cada ensayo, con el resultado (OK/NOK)
+    de cada control, coloreado en verde/rojo.
+
+No requiere instalar nada. No hace falta tener Excel abierto ni conocimientos
+de programacion.
+
+
+COMO USARLO
+-----------
+1. Hacer doble clic en "Amortiguadores_a_Excel.exe" (dentro de la carpeta "dist").
+2. Presionar "Seleccionar archivo .txt..." y elegir el archivo que entrega
+   la maquina (el que tiene los bloques ***ARCHIVO=..., ***VELOC=..., etc.).
+3. Presionar "Generar Excel".
+4. Esperar a que la barra de progreso llegue al final (en archivos grandes
+   puede tardar un par de minutos).
+5. El Excel se guarda automaticamente EN LA MISMA CARPETA que el .txt
+   original, con el mismo nombre, y se abre solo.
+
+Si ya existe un Excel con ese nombre, se crea uno nuevo agregando "(2)",
+"(3)", etc., para no pisar un archivo anterior.
+
+
+SI WINDOWS MUESTRA UNA PANTALLA AZUL DE ADVERTENCIA
+----------------------------------------------------
+Al ser un programa nuevo (no firmado digitalmente), es posible que la
+primera vez Windows muestre "Windows protegio su PC". Esto es normal para
+cualquier programa nuevo, no significa que tenga un virus. Para continuar:
+  1. Hacer clic en "Mas informacion".
+  2. Hacer clic en "Ejecutar de todas formas".
+
+Si el antivirus de la empresa bloquea directamente el archivo .exe y no
+aparece esta pantalla, contactar a IT para que lo autorice, o pedir que
+se ejecute el programa a partir del codigo fuente (carpeta con los
+archivos main.py / parser.py / excel_writer.py) con Python instalado.
+
+
+COSAS A TENER EN CUENTA SOBRE LOS DATOS
+-----------------------------------------
+- El criterio OK/NOK de Extendido, Comprimido y Fuerza a velocidad fija es
+  el mismo que usa la propia maquina: el valor tiene que ser mayor o igual
+  al limite inferior y MENOR (estricto) al limite superior. Tocar el
+  limite superior exacto ya se considera fuera de tolerancia. Esto se
+  verifico contra las banderas que imprime la maquina, sin diferencias.
+- Cada medicion trae ademas una bandera "V" que imprime la maquina y que
+  no esta documentada en el archivo de anotaciones entregado. Se muestra
+  tal cual la informa el equipo (no fue reinterpretada) y SI se tiene en
+  cuenta para el resultado general de cada medicion.
+- Si el archivo tiene tramos con fecha invalida (por ejemplo, por una
+  bateria de reloj agotada en el equipo), el programa NO corrige nada:
+  informa el tramo afectado en la hoja Resumen para que se revise a mano.
+- El programa no modifica ni borra el archivo .txt original.
+
+
+SI ALGO FALLA
+-------------
+Si aparece un mensaje de error, el detalle tecnico queda guardado en
+"error.log" (misma carpeta que el .exe). Ese archivo se puede compartir
+para pedir ayuda.
+
+
+ARCHIVOS DE ESTE PROYECTO
+--------------------------
+dist/Amortiguadores_a_Excel.exe   -> el programa (esto es lo unico que
+                                      necesita el ingeniero para usarlo).
+main.py, parser.py, excel_writer.py -> codigo fuente (por si en el futuro
+                                      hay que modificar algo).

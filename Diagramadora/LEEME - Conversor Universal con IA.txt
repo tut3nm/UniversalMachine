@@ -1,0 +1,148 @@
+CONVERSOR UNIVERSAL DE ENSAYOS A EXCEL  (PROTOTIPO CON IA LOCAL)
+=================================================================
+
+QUE ES
+------
+Una prueba de concepto de lo que preguntaste: un programa que NO tiene ningun
+formato programado de antemano. Le das el archivo de datos de cualquier maquina
+(y opcionalmente el archivo con anotaciones), descubre solo como esta armado, y
+lo exporta a Excel.
+
+La IA corre DENTRO de esta maquina:
+  - No usa internet.
+  - No usa API keys.
+  - No manda ningun dato a ningun servidor.
+
+
+COMO USARLO
+-----------
+Todo lo necesario esta en UNA sola carpeta autocontenida:
+
+    dist\Conversor_Universal_IA\
+
+Para usarlo en otra PC: copiar esa carpeta ENTERA (pesa ~1,2 GB, la mayor
+parte es el modelo de IA) por USB o red, y ahi dentro doble clic en
+Conversor_Universal_IA.exe. No hace falta instalar nada mas: ni Python, ni
+el motor de IA por separado, ni conexion a internet.
+
+(No se mando por el chat: 1,2 GB es demasiado grande para subir por esta via.
+Se copia directo desde el Explorador de Windows.)
+
+1. Doble clic en Conversor_Universal_IA.exe (arranca en unos 3-4 segundos).
+2. Paso 1: elegir el archivo con los datos (obligatorio).
+3. Paso 2: elegir el archivo con anotaciones (OPCIONAL). Si el archivo de
+   datos ya tiene parametros con nombres claros (por ejemplo un CSV con
+   PRESION_NOMINAL_BAR), se puede saltear este paso: la IA prolija esos
+   nombres sola. Las anotaciones sirven cuando el equipo usa siglas dificiles
+   de adivinar (como E, C, CPEXTSUP).
+4. Paso 3: "Generar Excel".
+
+Si desmarcas "Usar la IA local", el programa igual funciona: exporta todo, pero
+las columnas quedan con los nombres crudos del equipo (E, C, n0...). Es mas
+rapido (se salta el paso de la IA).
+
+NOTA TECNICA: esta version usa una carpeta (--onedir) en vez de un unico
+.exe, a proposito. Con el modelo pesando 1 GB, un .exe "todo en uno" tendria
+que volver a descomprimirse a una carpeta temporal cada vez que se abre (15
+a 40 segundos de espera extra, cada vez). La carpeta arranca al instante
+porque no hay nada que descomprimir.
+
+
+COMO ESTA HECHO (esto es lo importante)
+----------------------------------------
+El programa tiene DOS capas bien separadas, a proposito:
+
+  CAPA 1 - Lectura de los datos (SIN inteligencia artificial)
+     Analiza la "forma" de cada linea, agrupa las que se repiten y detecta el
+     ciclo del registro. De aca salen los numeros. Es 100% deterministica:
+     siempre da el mismo resultado y no puede inventar nada.
+
+  CAPA 2 - Nombres de las columnas (CON inteligencia artificial)
+     El modelo lee UNICAMENTE el archivo con anotaciones y propone un nombre y
+     una unidad para cada campo que la Capa 1 ya encontro.
+
+Por que esta separacion: un modelo chico corriendo en una PC de oficina no es
+confiable para leer 200.000 numeros (podria equivocarse en alguno y nadie se
+daria cuenta). Pero si es lo bastante bueno para leer las anotaciones de un
+tecnico y decir "E significa fuerza de extendido, en kgf".
+
+Ademas, al modelo se le impone una GRAMATICA que lo obliga a responder con la
+estructura exacta pedida: no puede inventar campos, ni saltearse ninguno, ni
+romper el formato de la respuesta.
+
+CONSECUENCIA PRACTICA: si la IA falla, esta apagada o dice una pavada, los
+NUMEROS del Excel siguen estando bien. Lo unico que se degrada son los nombres
+de las columnas.
+
+
+QUE TAN BIEN ANDA (medido, no estimado)
+----------------------------------------
+Probado sobre el archivo real de amortiguadores (1.042.333 lineas):
+  - Detecto 208.478 mediciones: EXACTAMENTE las mismas que el programa
+    especifico que habiamos hecho para esa maquina.
+  - Se compararon 5.000 mediciones al azar campo por campo: 5.000 de 5.000
+    identicas. Cero diferencias.
+  - Encontro los 4 cambios de tolerancia a lo largo de los años.
+  - Tiempo total: 91 segundos (20s estructura + 39s IA + 33s Excel).
+
+Probado ademas con dos formatos INVENTADOS, distintos de este:
+  - Un ensayo de traccion (config con "CLAVE: valor", 3 lineas por registro).
+  - Un banco hidraulico (columnas numericas sueltas y un OK al final).
+  En los dos: 100% de los registros detectados y 0 lineas sin interpretar.
+
+Calidad de los nombres que pone la IA (modelo de 1.5B, el que entra comodo
+en esta PC). De los 14 campos de medicion:
+  BIEN:     Fuerza extendida (kgf), Fuerza comprimida (kgf),
+            Velocidad de testeo (mm/s), Fecha y hora
+  REGULAR:  las banderas Y y V las llama "Valor de fuerza"/"Valor de velocidad"
+  MAL:      confunde la bandera F (+/-) con una fuerza en kgf, y no distingue
+            tolerancia SUPERIOR de INFERIOR (a las dos les pone el mismo nombre,
+            aunque el programa les agrega la sigla original para diferenciarlas)
+
+O sea: los nombres hay que revisarlos, no se pueden dar por buenos sin mirar.
+Por eso el Excel trae una hoja "Estructura detectada" que muestra, para cada
+columna, la sigla original del equipo y el nombre que puso la IA, y marca en
+verde los que vinieron de la IA.
+
+
+LIMITACIONES HONESTAS DE ESTE PROTOTIPO
+----------------------------------------
+1. NO evalua tolerancias ni calcula OK/NOK. El programa especifico de
+   amortiguadores si lo hace, porque ahi sabemos con certeza que tolerancia
+   aplica a que medicion. Hacer que la IA adivine esa relacion es justamente
+   donde un error seria peligroso (marcar como buena una pieza mala), asi que
+   se dejo afuera a proposito. Las tolerancias se exportan en la hoja Resumen
+   para que las apliques vos.
+2. Espera archivos donde los registros se repiten con un patron. Un CSV con
+   encabezado, o un XML, hoy no los cubre.
+3. El modelo de 1.5B es el limite comodo de esta PC (tiene 15 GB de RAM pero
+   solo ~2,7 GB libres). Con un modelo de 3B o 7B los nombres saldrian bastante
+   mejor; se cambia solo poniendo otro archivo .gguf en runtime\models\
+   (el programa toma automaticamente el mas grande que encuentre).
+4. Los nombres de columna hay que revisarlos siempre antes de usar el Excel
+   para algo serio.
+
+
+SI QUERES PROBAR OTRA MAQUINA
+------------------------------
+Con solo el archivo de datos ya funciona (la IA prolija los nombres que el
+propio equipo trae, sin inventar de mas). Si ademas tenes un archivo con
+anotaciones explicando que es cada valor, los nombres de las columnas
+salen bastante mejor, sobre todo cuando el equipo usa siglas (como en
+amortiguadores: E, C, CPEXTSUP). Probado con un archivo tipo CSV de banco
+hidraulico (parametros como PRESION_NOMINAL_BAR, sin ningun archivo de
+anotaciones): la IA lo tradujo solo a "Presion nominal (bar)".
+
+
+ARCHIVOS
+--------
+dist\Conversor_Universal_IA\      la carpeta autocontenida (esto es lo que
+                                   se copia a otra PC)
+dist\Conversor_Universal_IA\Conversor_Universal_IA.exe   el programa
+runtime\llama\                    motor de IA (llama.cpp, CPU, 17 MB)
+runtime\models\*.gguf             el modelo (Qwen2.5-1.5B, 1 GB)
+universal.py                      la interfaz
+ai\structure.py                   Capa 1: descubrimiento (sin IA)
+ai\llm.py                         ejecucion del modelo local + gramatica
+ai\labeler.py                     Capa 2: nombres (con IA)
+ai\generic_excel.py               exportador a Excel

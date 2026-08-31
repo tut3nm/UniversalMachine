@@ -1,0 +1,32 @@
+# Artefactos de compilación
+/build/
+/dist/
+*.spec
+src/_build_info.py
+
+# Datos de trabajo generados por la app junto al ejecutable
+/datos232/
+/datos/
+
+# Respaldos temporales de trabajo
+/_backup_pre_universal/
+/_safe_datos232_backup/
+/respaldos_previos/
+
+# CSV reales de planta (Nivel 0.1 de PLAN_MEJORAS.md): nunca se commitean.
+# Las versiones anonimizadas que SÍ se commitean viven en la raíz
+# (recetas232.csv, usado como archivo_inicial) y en tests/fixtures/.
+/datos_reales_privados/
+
+# Pruebas: cache de pytest
+.pytest_cache/
+
+# Config local de Claude Code (personal, no compartido)
+.claude/settings.local.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/

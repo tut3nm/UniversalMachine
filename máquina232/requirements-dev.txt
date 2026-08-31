@@ -1,0 +1,9 @@
+# ============================================================================
+# Configurador de Parametros de Planta - dependencias de DESARROLLO
+# ============================================================================
+# Estas dependencias solo hacen falta para correr la suite de tests; NO se
+# necesitan para usar la app ni para compilar el ejecutable (ver
+# requirements.txt para eso).
+-r requirements.txt
+
+pytest>=7.0

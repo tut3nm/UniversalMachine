@@ -1,0 +1,705 @@
+{
+  "nodes": [
+    {
+      "id": "c_users_z0326899_downloads_máquina232_src_paths_py",
+      "label": "paths.py",
+      "file_type": "code",
+      "source_file": "src/paths.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "c_users_z0326899_downloads_máquina232_src_paths_resource_path",
+      "label": "resource_path()",
+      "file_type": "code",
+      "source_file": "src/paths.py",
+      "source_location": "L19",
+      "_origin": "ast"
+    },
+    {
+      "id": "c_users_z0326899_downloads_máquina232_src_paths_app_base_dir",
+      "label": "app_base_dir()",
+      "file_type": "code",
+      "source_file": "src/paths.py",
+      "source_location": "L31",
+      "_origin": "ast"
+    },
+    {
+      "id": "c_users_z0326899_downloads_máquina232_src_paths_profiles_dir",
+      "label": "profiles_dir()",
+      "file_type": "code",
+      "source_file": "src/paths.py",
+      "source_location": "L38",
+      "_origin": "ast"
+    },
+    {
+      "id": "c_users_z0326899_downloads_máquina232_src_paths_data_dir_for",
+      "label": "data_dir_for()",
+      "file_type": "code",
+      "source_file": "src/paths.py",
+      "source_location": "L56",
+      "_origin": "ast"
+    },
+    {
+      "id": "c_users_z0326899_downloads_máquina232_src_paths_rationale_1",
+      "label": "paths.py ======== Ubicación de recursos (perfiles, archivos de datos) tanto en…",
+      "file_type": "rationale",
+      "source_file": "src/paths.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "c_users_z0326899_downloads_máquina232_src_paths_rationale_20",
+      "label": "Ruta a un recurso embebido (funciona con PyInstaller y en desarrollo).",
+      "file_type": "rationale",
+      "source_file": "src/paths.py",
+      "source_location": "L20",
+      "_origin": "ast"
+    },
+    {
+      "id": "c_users_z0326899_downloads_máquina232_src_paths_rationale_32",
+      "label": "Carpeta escribible: junto al .exe (empaquetado) o raíz del proyecto.",
+      "file_type": "rationale",
+      "source_file": "src/paths.py",
+      "source_location": "L32",
+      "_origin": "ast"
+    },
+    {
+      "id": "c_users_z0326899_downloads_máquina232_src_paths_rationale_39",
+      "label": "Carpeta escribible de perfiles, sembrada desde los perfiles embebidos. Los…",
+      "file_type": "rationale",
+      "source_file": "src/paths.py",
+      "source_location": "L39",
+      "_origin": "ast"
+    },
+    {
+      "id": "c_users_z0326899_downloads_máquina232_src_profile_builder_py",
+      "label": "profile_builder.py",
+      "file_type": "code",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "c_users_z0326899_downloads_máquina232_src_profile_builder_sniff_csv",
+      "label": "sniff_csv()",
+      "file_type": "code",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L33",
+      "_origin": "ast"
+    },
+    {
+      "id": "c_users_z0326899_downloads_máquina232_src_profile_builder_read_grid",
+      "label": "read_grid()",
+      "file_type": "code",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L60",
+      "_origin": "ast"
+    },
+    {
+      "id": "c_users_z0326899_downloads_máquina232_src_profile_builder_classify_row",
+      "label": "classify_row()",
+      "file_type": "code",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L69",
+      "_origin": "ast"
+    },
+    {
+      "id": "c_users_z0326899_downloads_máquina232_src_profile_builder_suggest_clave_row",
+      "label": "suggest_clave_row()",
+      "file_type": "code",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L98",
+      "_origin": "ast"
+    },
+    {
+      "id": "c_users_z0326899_downloads_máquina232_src_profile_builder_decimal_re",
+      "label": "_decimal_re()",
+      "file_type": "code",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L122",
+      "_origin": "ast"
+    },
+    {
+      "id": "pattern",
+      "label": "Pattern",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "_origin": "ast"
+    },
+    {
+      "id": "c_users_z0326899_downloads_máquina232_src_profile_builder_suggest_tipo",
+      "label": "suggest_tipo()",
+      "file_type": "code",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L126",
+      "_origin": "ast"
+    },
+    {
+      "id": "c_users_z0326899_downloads_máquina232_src_profile_builder_slug",
+      "label": "_slug()",
+      "file_type": "code",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L157",
+      "_origin": "ast"
+    },
+    {
+      "id": "c_users_z0326899_downloads_máquina232_src_profile_builder_build_profile_columnas",
+      "label": "build_profile_columnas()",
+      "file_type": "code",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L174",
+      "_origin": "ast"
+    },
+    {
+      "id": "c_users_z0326899_downloads_máquina232_src_profile_builder_build_profile_filas",
+      "label": "build_profile_filas()",
+      "file_type": "code",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L302",
+      "_origin": "ast"
+    },
+    {
+      "id": "c_users_z0326899_downloads_máquina232_src_profile_builder_build_scaffold",
+      "label": "build_scaffold()",
+      "file_type": "code",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L371",
+      "_origin": "ast"
+    },
+    {
+      "id": "c_users_z0326899_downloads_máquina232_src_profile_builder_rationale_1",
+      "label": "profile_builder.py =================== Motor de detección y armado de perfiles,…",
+      "file_type": "rationale",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "c_users_z0326899_downloads_máquina232_src_profile_builder_rationale_34",
+      "label": "Detecta BOM, fin de línea, delimitador y símbolo decimal de un CSV.",
+      "file_type": "rationale",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L34",
+      "_origin": "ast"
+    },
+    {
+      "id": "c_users_z0326899_downloads_máquina232_src_profile_builder_rationale_70",
+      "label": "Sugiere qué es una fila (para el paso de vista previa del wizard): \"indice\" ->…",
+      "file_type": "rationale",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L70",
+      "_origin": "ast"
+    },
+    {
+      "id": "c_users_z0326899_downloads_máquina232_src_profile_builder_rationale_99",
+      "label": "Primera fila con valores no numéricos y todos distintos entre sí: heurística…",
+      "file_type": "rationale",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L99",
+      "_origin": "ast"
+    },
+    {
+      "id": "c_users_z0326899_downloads_máquina232_src_profile_builder_rationale_127",
+      "label": "Analiza una muestra de valores crudos de un campo y sugiere {\"tipo\": ...,…",
+      "file_type": "rationale",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L127",
+      "_origin": "ast"
+    },
+    {
+      "id": "c_users_z0326899_downloads_máquina232_src_profile_builder_rationale_158",
+      "label": "Nombre interno seguro para un campo (identificador único).",
+      "file_type": "rationale",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L158",
+      "_origin": "ast"
+    },
+    {
+      "id": "c_users_z0326899_downloads_máquina232_src_profile_builder_rationale_180",
+      "label": "Arma el perfil JSON (orientacion='columnas') a partir de lo que el usuario…",
+      "file_type": "rationale",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L180",
+      "_origin": "ast"
+    },
+    {
+      "id": "c_users_z0326899_downloads_máquina232_src_profile_builder_rationale_308",
+      "label": "Arma el perfil JSON (orientacion='filas': CSV normal, un registro por fila).…",
+      "file_type": "rationale",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L308",
+      "_origin": "ast"
+    },
+    {
+      "id": "c_users_z0326899_downloads_máquina232_src_profile_builder_rationale_374",
+      "label": "Arma un perfil JSON borrador de un solo campo por fila/columna (equivalente al…",
+      "file_type": "rationale",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L374",
+      "_origin": "ast"
+    }
+  ],
+  "edges": [
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_paths_py",
+      "target": "os",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/paths.py",
+      "source_location": "L14",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_paths_py",
+      "target": "shutil",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/paths.py",
+      "source_location": "L15",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_paths_py",
+      "target": "sys",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/paths.py",
+      "source_location": "L16",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_paths_py",
+      "target": "c_users_z0326899_downloads_máquina232_src_paths_resource_path",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/paths.py",
+      "source_location": "L19",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_paths_py",
+      "target": "c_users_z0326899_downloads_máquina232_src_paths_app_base_dir",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/paths.py",
+      "source_location": "L31",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_paths_py",
+      "target": "c_users_z0326899_downloads_máquina232_src_paths_profiles_dir",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/paths.py",
+      "source_location": "L38",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_paths_py",
+      "target": "c_users_z0326899_downloads_máquina232_src_paths_data_dir_for",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/paths.py",
+      "source_location": "L56",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_paths_profiles_dir",
+      "target": "c_users_z0326899_downloads_máquina232_src_paths_app_base_dir",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/paths.py",
+      "source_location": "L44",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_paths_profiles_dir",
+      "target": "c_users_z0326899_downloads_máquina232_src_paths_resource_path",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/paths.py",
+      "source_location": "L46",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_paths_data_dir_for",
+      "target": "c_users_z0326899_downloads_máquina232_src_paths_app_base_dir",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/paths.py",
+      "source_location": "L57",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_paths_rationale_1",
+      "target": "c_users_z0326899_downloads_máquina232_src_paths_py",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/paths.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_paths_rationale_20",
+      "target": "c_users_z0326899_downloads_máquina232_src_paths_resource_path",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/paths.py",
+      "source_location": "L20",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_paths_rationale_32",
+      "target": "c_users_z0326899_downloads_máquina232_src_paths_app_base_dir",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/paths.py",
+      "source_location": "L32",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_paths_rationale_39",
+      "target": "c_users_z0326899_downloads_máquina232_src_paths_profiles_dir",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/paths.py",
+      "source_location": "L39",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_profile_builder_py",
+      "target": "csv",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L26",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_profile_builder_py",
+      "target": "re",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L27",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_profile_builder_py",
+      "target": "c_users_z0326899_downloads_máquina232_src_profile_builder_sniff_csv",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L33",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_profile_builder_py",
+      "target": "c_users_z0326899_downloads_máquina232_src_profile_builder_read_grid",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L60",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_profile_builder_py",
+      "target": "c_users_z0326899_downloads_máquina232_src_profile_builder_classify_row",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L69",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_profile_builder_py",
+      "target": "c_users_z0326899_downloads_máquina232_src_profile_builder_suggest_clave_row",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L98",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_profile_builder_py",
+      "target": "c_users_z0326899_downloads_máquina232_src_profile_builder_decimal_re",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L122",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_profile_builder_decimal_re",
+      "target": "pattern",
+      "relation": "references",
+      "context": "return_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L122",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_profile_builder_py",
+      "target": "c_users_z0326899_downloads_máquina232_src_profile_builder_suggest_tipo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L126",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_profile_builder_py",
+      "target": "c_users_z0326899_downloads_máquina232_src_profile_builder_slug",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L157",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_profile_builder_py",
+      "target": "c_users_z0326899_downloads_máquina232_src_profile_builder_build_profile_columnas",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L174",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_profile_builder_py",
+      "target": "c_users_z0326899_downloads_máquina232_src_profile_builder_build_profile_filas",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L302",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_profile_builder_py",
+      "target": "c_users_z0326899_downloads_máquina232_src_profile_builder_build_scaffold",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L371",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_profile_builder_suggest_tipo",
+      "target": "c_users_z0326899_downloads_máquina232_src_profile_builder_decimal_re",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L148",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_profile_builder_build_profile_columnas",
+      "target": "c_users_z0326899_downloads_máquina232_src_profile_builder_slug",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L239",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_profile_builder_build_profile_columnas",
+      "target": "c_users_z0326899_downloads_máquina232_src_profile_builder_classify_row",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L268",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_profile_builder_build_profile_filas",
+      "target": "c_users_z0326899_downloads_máquina232_src_profile_builder_slug",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L321",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_profile_builder_build_scaffold",
+      "target": "c_users_z0326899_downloads_máquina232_src_profile_builder_sniff_csv",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L377",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_profile_builder_build_scaffold",
+      "target": "c_users_z0326899_downloads_máquina232_src_profile_builder_read_grid",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L378",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_profile_builder_build_scaffold",
+      "target": "c_users_z0326899_downloads_máquina232_src_profile_builder_suggest_tipo",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L392",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_profile_builder_build_scaffold",
+      "target": "c_users_z0326899_downloads_máquina232_src_profile_builder_slug",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L394",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_profile_builder_rationale_1",
+      "target": "c_users_z0326899_downloads_máquina232_src_profile_builder_py",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_profile_builder_rationale_34",
+      "target": "c_users_z0326899_downloads_máquina232_src_profile_builder_sniff_csv",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L34",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_profile_builder_rationale_70",
+      "target": "c_users_z0326899_downloads_máquina232_src_profile_builder_classify_row",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L70",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_profile_builder_rationale_99",
+      "target": "c_users_z0326899_downloads_máquina232_src_profile_builder_suggest_clave_row",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L99",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_profile_builder_rationale_127",
+      "target": "c_users_z0326899_downloads_máquina232_src_profile_builder_suggest_tipo",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L127",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_profile_builder_rationale_158",
+      "target": "c_users_z0326899_downloads_máquina232_src_profile_builder_slug",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L158",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_profile_builder_rationale_180",
+      "target": "c_users_z0326899_downloads_máquina232_src_profile_builder_build_profile_columnas",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L180",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_profile_builder_rationale_308",
+      "target": "c_users_z0326899_downloads_máquina232_src_profile_builder_build_profile_filas",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L308",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "c_users_z0326899_downloads_máquina232_src_profile_builder_rationale_374",
+      "target": "c_users_z0326899_downloads_máquina232_src_profile_builder_build_scaffold",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/profile_builder.py",
+      "source_location": "L374",
+      "weight": 1.0,
+      "_origin": "ast"
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

@@ -1,0 +1,96 @@
+EDITOR DE RECETAS DE MAQUINA  (archivos CSV de puesta a punto)
+=================================================================
+
+QUE ES
+------
+Herramienta para editar los archivos CSV que algunas máquinas de la empresa
+usan para su puesta a punto por material/producto (formato: una fila por
+parámetro, una columna por código de producto — como recetas232.csv).
+
+Convierte el CSV a un Excel cómodo para editar (un producto por fila, un
+parámetro por columna), y después reconstruye el CSV a partir de los cambios
+hechos en Excel, para volver a cargarlo en la máquina.
+
+Esta herramienta es DISTINTA del "Conversor Universal de Ensayos" que ya
+tenés: aquella es para archivos de LOG que la máquina escribe (solo lectura,
+análisis). Esta es para archivos que la máquina LEE para configurarse, así
+que el resultado se puede volver a cargar en el equipo.
+
+
+COMO USARLO
+-----------
+PASO 1 - Generar el Excel editable
+  1. Pestaña "1. Generar Excel editable".
+  2. Seleccionar el archivo .csv de la máquina.
+  3. "Generar Excel editable". Se abre solo al terminar.
+  4. En la hoja "Recetas": cada fila es un producto, cada columna un
+     parámetro. Editar los valores necesarios.
+  5. NO tocar la columna "Código de producto", ni agregar/borrar filas o
+     columnas: son lo que identifica cada valor al reconstruir el archivo.
+  6. Guardar el Excel (Ctrl+S), sin cambiarle el nombre.
+
+PASO 2 - Aplicar los cambios al archivo original
+  1. Pestaña "2. Aplicar cambios al original".
+  2. Seleccionar el Excel que acabás de editar.
+  3. Seleccionar el archivo .csv ORIGINAL (el mismo del Paso 1, sin editar).
+  4. "Comparar y generar CSV actualizado".
+  5. Revisar la lista de cambios que aparece: parámetro, producto, valor
+     antes y valor después.
+  6. El archivo nuevo se guarda al lado del original, con "(actualizado)"
+     en el nombre. El original NUNCA se modifica ni se sobreescribe.
+
+
+COMO FUNCIONA POR DENTRO (por que es seguro para este uso)
+-------------------------------------------------------------
+El programa NO reescribe el archivo entero a partir de lo que hay en Excel.
+Toma el archivo ORIGINAL como base, y cambia línea por línea SOLO las filas
+de parámetro donde detectó al menos un valor distinto. Todo lo demás —
+encabezados, fila de códigos de producto, filas internas del formato, orden,
+saltos de línea, codificación— queda copiado byte a byte igual al original.
+
+Antes de terminar, el programa vuelve a leer el archivo recién generado y
+confirma que cada cambio quedó exactamente como se pidió. Si algo no
+coincide, avisa en rojo y no lo marca como confiable.
+
+Además valida automáticamente:
+  - Si un código de producto editado en Excel no existe en el original
+    (por ejemplo, un typo): avisa que esos cambios NO se aplicaron, en vez
+    de aplicarlos a un producto equivocado o perderlos en silencio.
+  - Si un valor se cambia a texto en una fila donde siempre hubo números:
+    avisa, por si es un error de tipeo.
+  - Si se deja un valor vacío: avisa, para confirmar que la máquina lo
+    interpreta bien.
+
+Probado contra el archivo real (673 productos × parámetros): al no cambiar
+nada, el archivo generado es IDÉNTICO byte a byte al original. Al cambiar un
+valor puntual, únicamente esa fila cambia; el resto del archivo (líneas de
+encabezado, fila de índices, todas las demás filas de parámetro) queda
+exactamente igual, verificado línea por línea.
+
+
+LIMITACIONES / QUE TODAVIA NO CUBRE
+--------------------------------------
+- Pensado para el formato "matriz CSV" (parámetro por fila, producto por
+  columna, todas las filas con igual cantidad de columnas), como
+  recetas232.csv. Si otro archivo de puesta a punto tiene una estructura
+  distinta (por ejemplo el formato de texto libre con asteriscos de la
+  máquina de amortiguadores), esta herramienta no lo va a reconocer bien:
+  avisá y se adapta.
+- No valida contra las tolerancias o límites físicos reales del equipo (por
+  ejemplo, no sabe si "999" es una velocidad absurda para esa máquina). Solo
+  valida consistencia interna del archivo (tipo de dato, códigos de producto
+  correctos).
+- No reemplaza el proceso de autorización de cambios que ya tenga la empresa
+  para modificar puesta a punto de producción: es una herramienta para hacer
+  el cambio más rápido y con menos errores de transcripción, no para saltear
+  controles.
+
+
+ARCHIVOS
+--------
+dist\Editor_Recetas_Maquina.exe   el programa (un solo archivo, sin IA)
+recetas232 (editable - ejemplo).xlsx     ejemplo de Excel generado (Paso 1)
+recetas232 (actualizado - ejemplo).csv   ejemplo de CSV regenerado (Paso 2),
+                                          con un cambio real aplicado
+recipe_editor.py                  interfaz
+ai\csv_recipe.py                  lectura, escritura y verificación del CSV

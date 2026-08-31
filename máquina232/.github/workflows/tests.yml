@@ -1,0 +1,51 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pytest:
+    # Windows porque es la plataforma real de despliegue (Nivel 3.3 del
+    # plan de mejoras): el .exe portable solo corre ahí, y algunas
+    # particularidades (rutas, Tk empaquetado, os.replace) son propias de
+    # Windows.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Correr pytest
+        run: python -m pytest -q
+
+  build-exe:
+    # Solo en tags (v0.4.0, etc.): publica el .exe compilado como artefacto
+    # de esa versión, sin bloquear los pushes/PRs normales con una
+    # compilación completa cada vez.
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: pytest
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compilar
+        run: .\build.bat
+        shell: cmd
+
+      - name: Publicar el .exe como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: ConfiguradorPlanta-${{ github.ref_name }}
+          path: dist/ConfiguradorPlanta.exe

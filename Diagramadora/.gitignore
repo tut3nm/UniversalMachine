@@ -1,0 +1,32 @@
+# Artefactos de build de PyInstaller (binarios compilados, ~1.3 GB)
+/dist/
+/build/
+
+# Runtime vendorizado de llama.cpp + modelo GGUF (~1.1 GB) — se descarga
+# aparte, no se commitea al repo.
+/runtime/
+
+# Python
+__pycache__/
+ai/__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Config local de Claude Code (personal, no compartido)
+.claude/settings.local.json
+
+# Datos/mediciones reales de planta (mismo criterio que
+# máquina232/PLAN_MEJORAS.md Nivel 0.1): nunca se commitean. La versión
+# anonimizada de "recetas232 (actualizado - ejemplo).csv" SÍ se commitea,
+# en la raíz de Diagramadora — ver scripts/anonymize_csv.py en máquina232.
+/datos_reales_privados/
+
+# Cache de graphify: graphify_out/converted/ tiene volcados en texto plano
+# de los .xlsx reales de mediciones (recetas232, Prod. 481700012633,
+# Ejemplo salida UNIVERSAL) — al ser una conversión byte-a-byte del
+# contenido real, no hay forma segura de commitear esta carpeta sin
+# reexponer los mismos datos que datos_reales_privados/ excluye arriba.
+# Es 100% regenerable con `graphify update .`.
+/graphify-out/

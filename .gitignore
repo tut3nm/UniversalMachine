@@ -1,19 +1,13 @@
-# Artefactos de compilación
-/build/
-/dist/
-*.spec
+# Cada subcarpeta (máquina232/, Diagramadora/) tiene su propio .gitignore
+# más específico. Esto es solo para basura de nivel raíz / herramientas.
 
-# Datos de trabajo generados por la app junto al ejecutable
-/datos232/
-/datos/
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
 
-# Respaldos temporales de trabajo
-/_backup_pre_universal/
-/_safe_datos232_backup/
-
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
+# Futuro front/backend (placeholders por ahora, sin stack todavía)
+node_modules/
 .venv/
 venv/
+__pycache__/
