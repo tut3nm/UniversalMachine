@@ -15,6 +15,7 @@ import paths
 
 from app.routers import consulta as consulta_router
 from app.routers import maquinas as maquinas_router
+from app.routers import mediciones as mediciones_router
 from app.routers import wizard as wizard_router
 
 def _front_dist() -> str:
@@ -60,6 +61,7 @@ app.add_middleware(
 app.include_router(maquinas_router.router)
 app.include_router(consulta_router.router)
 app.include_router(wizard_router.router)
+app.include_router(mediciones_router.router)
 
 
 @app.get("/api/health")
