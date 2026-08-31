@@ -74,6 +74,10 @@ export default function MaquinaDetalle() {
     <div>
       <p>
         <Link to="/">← Máquinas</Link>
+        {" · "}
+        <Link to={`/maquinas/${id}/backups`}>Backups</Link>
+        {" · "}
+        <Link to={`/maquinas/${id}/historial`}>Historial</Link>
       </p>
       <h1>Máquina {id}</h1>
       <input

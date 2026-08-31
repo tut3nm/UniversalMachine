@@ -3,6 +3,7 @@
 fastapi
 uvicorn[standard]
 pywebview
+python-multipart
 
 # openpyxl hace falta para excel_import.py (importación desde Excel,
 # reutilizado de máquina232/src/ — ver wizard/importación en PLAN_WEBAPP.md).

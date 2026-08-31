@@ -13,7 +13,9 @@ from app import _bootstrap  # noqa: F401  (side effect: agrega app/core/ a sys.p
 import instancia
 import paths
 
+from app.routers import consulta as consulta_router
 from app.routers import maquinas as maquinas_router
+from app.routers import wizard as wizard_router
 
 def _front_dist() -> str:
     """En desarrollo, front/dist (si existe: `npm run build` corrido a
@@ -56,6 +58,8 @@ app.add_middleware(
 )
 
 app.include_router(maquinas_router.router)
+app.include_router(consulta_router.router)
+app.include_router(wizard_router.router)
 
 
 @app.get("/api/health")

@@ -70,4 +70,35 @@ export const api = {
     req<{ hallazgos: { tipo: string; idx: number; code: string; mensaje: string }[] }>(
       `/api/maquinas/${id}/salud`,
     ),
+  listarBackups: (id: string) => req<BackupInfo[]>(`/api/maquinas/${id}/backups`),
+  restaurarBackup: (id: string, nombre: string) =>
+    req(`/api/maquinas/${id}/backups/${encodeURIComponent(nombre)}/restaurar`, {
+      method: "POST",
+    }),
+  listarHistorial: (id: string) => req<EventoHistorial[]>(`/api/maquinas/${id}/historial`),
+  diferencias: (id: string) => req<{ diffs: DiffRegistro[] }>(`/api/maquinas/${id}/diferencias`),
 };
+
+export interface BackupInfo {
+  nombre: string;
+  ruta: string;
+  timestamp: string;
+  tamano_bytes: number;
+}
+
+export interface EventoHistorial {
+  timestamp: string;
+  usuario: string;
+  accion: string;
+  clave: string;
+  anteriores: Record<string, unknown> | null;
+  nuevos: Record<string, unknown> | null;
+  origen: string;
+  version: string | null;
+}
+
+export interface DiffRegistro {
+  tipo: string;
+  clave: string;
+  [k: string]: unknown;
+}
