@@ -6,8 +6,12 @@
 Thumbs.db
 *.swp
 
-# Futuro front/backend (placeholders por ahora, sin stack todavía)
+# front/ + backend/ (sistema web nuevo, ver PLAN_WEBAPP.md)
 node_modules/
 .venv/
 venv/
 __pycache__/
+
+# build.bat: salida de PyInstaller (front/dist/ ya lo cubre front/.gitignore)
+/dist/
+/build/

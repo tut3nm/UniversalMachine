@@ -1,0 +1,52 @@
+body {
+  font-family: system-ui, sans-serif;
+  margin: 2rem;
+  color: #1a1a1a;
+  background: #fafafa;
+}
+
+h1 {
+  font-size: 1.4rem;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 1rem;
+}
+
+th,
+td {
+  border: 1px solid #ddd;
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+th {
+  background: #eef3ea;
+}
+
+tr.row-warn {
+  background: #fff6e0;
+}
+
+tr.row-error {
+  background: #fde2e2;
+}
+
+input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #ccc;
+  padding: 0.2rem;
+  font-size: 0.9rem;
+}
+
+.error {
+  color: #b00020;
+}
+
+a {
+  color: #2e7d32;
+}

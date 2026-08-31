@@ -1,0 +1,12 @@
+# Dependencias del backend (FastAPI + empaquetado con pywebview).
+# install.bat las instala automáticamente en backend\.venv\.
+fastapi
+uvicorn[standard]
+pywebview
+
+# openpyxl hace falta para excel_import.py (importación desde Excel,
+# reutilizado de máquina232/src/ — ver wizard/importación en PLAN_WEBAPP.md).
+openpyxl>=3.1
+
+# pyinstaller se usa SOLO para generar el ejecutable empaquetado.
+# build.bat lo instala aparte (no hace falta para desarrollo/`run.bat`).

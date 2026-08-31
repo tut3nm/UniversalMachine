@@ -1,0 +1,24 @@
+# Datos generados en desarrollo (equivalente a máquina232/datos/)
+/datos/
+/profiles/*.json.bak-*
+.lock
+
+# build.bat: work dir de PyInstaller (la salida final va a /dist/ en la raíz)
+/build/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Runtime de IA (llama.cpp + modelo GGUF), se copia de Diagramadora/runtime/
+# cuando se implemente routers/mediciones.py — no se commitea (ver
+# Diagramadora/.gitignore).
+/runtime/
+
+# Config local de Claude Code (personal, no compartido)
+.claude/settings.local.json
+
+# Tests
+.pytest_cache/
