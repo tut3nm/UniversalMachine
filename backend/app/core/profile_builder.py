@@ -231,14 +231,21 @@ def build_profile_columnas(machine_id: str, nombre: str, descripcion: str,
     campos = []
 
     for r in range(max_fila + 1):
-        etiqueta = (grid[r][0] if r < len(grid) and grid[r] else "").strip()
+        # `etiqueta` se guarda SIN recortar: es la celda de columna 0, que
+        # datastore._grid_columnas() vuelve a escribir tal cual al
+        # reconstruir el archivo (round-trip byte a byte). Si se guardara
+        # recortada, un espacio final/inicial legítimo en el export original
+        # (p. ej. "Modelos Amortiguador ") se perdería en cada reconstrucción.
+        # `etiqueta_ui` (recortada) es solo para título/slug sugeridos.
+        etiqueta = grid[r][0] if r < len(grid) and grid[r] else ""
+        etiqueta_ui = etiqueta.strip()
 
         if r == clave_row:
             c = elegidas_por_fila.get(r, {})
             campos.append({
-                "nombre_interno": c.get("nombre_interno") or _slug(etiqueta, r, used_names),
+                "nombre_interno": c.get("nombre_interno") or _slug(etiqueta_ui, r, used_names),
                 "rol": "clave", "fila": r, "etiqueta": etiqueta,
-                "tipo": "texto", "titulo_ui": c.get("titulo_ui") or etiqueta or "Código",
+                "tipo": "texto", "titulo_ui": c.get("titulo_ui") or etiqueta_ui or "Código",
                 "visible": True,
             })
             continue
@@ -248,7 +255,7 @@ def build_profile_columnas(machine_id: str, nombre: str, descripcion: str,
             campo = {
                 "nombre_interno": c["nombre_interno"], "rol": "parametro",
                 "fila": r, "etiqueta": etiqueta,
-                "tipo": c.get("tipo", "texto"), "titulo_ui": c.get("titulo_ui") or etiqueta,
+                "tipo": c.get("tipo", "texto"), "titulo_ui": c.get("titulo_ui") or etiqueta_ui,
                 "visible": True,
             }
             if c.get("formato"):
@@ -287,9 +294,9 @@ def build_profile_columnas(machine_id: str, nombre: str, descripcion: str,
             # Campo oculto: preserva cada celda cruda por registro, viaja con
             # alta/baja, nunca se muestra ni se edita.
             campos.append({
-                "nombre_interno": _slug(etiqueta or f"oculto_{r}", r, used_names),
+                "nombre_interno": _slug(etiqueta_ui or f"oculto_{r}", r, used_names),
                 "rol": "parametro", "fila": r, "etiqueta": etiqueta,
-                "tipo": "texto", "titulo_ui": etiqueta or f"Fila {r + 1}",
+                "tipo": "texto", "titulo_ui": etiqueta_ui or f"Fila {r + 1}",
                 "visible": False,
             })
 
@@ -417,9 +424,12 @@ def build_scaffold(machine_id: str, nombre: str, descripcion: str,
         used_names: set[str] = set()
         campos = []
         for r, row in enumerate(grid):
-            etiqueta = (row[0] if row else "").strip()
+            # sin recortar: se reescribe tal cual al reconstruir el archivo
+            # (ver comentario equivalente en build_profile_columnas).
+            etiqueta = row[0] if row else ""
+            etiqueta_ui = etiqueta.strip()
             es_clave = r == clave_row
-            titulo = etiqueta or ("Código" if es_clave else f"Fila {r + 1}")
+            titulo = etiqueta_ui or ("Código" if es_clave else f"Fila {r + 1}")
             if es_clave:
                 sug = {"tipo": "texto", "formato": {}}
             else:

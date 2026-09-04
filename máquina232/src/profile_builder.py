@@ -96,20 +96,50 @@ def classify_row(grid: list[list[str]], row_idx: int, primera_col: int) -> str:
 
 
 def suggest_clave_row(grid: list[list[str]], primera_col: int) -> int | None:
-    """Primera fila con valores no numéricos y todos distintos entre sí:
-    heurística simple para sugerir cuál es el código/clave de cada pieza."""
+    """Primera fila con valores todos distintos entre sí: heurística simple
+    para sugerir cuál es el código/clave de cada pieza. Se prefiere una fila
+    de TEXTO (más probable que sea un código real y no una medición), pero si
+    ninguna fila de texto califica se acepta la primera fila puramente
+    numérica con valores únicos como respaldo (p. ej. un código de pieza que
+    resulta ser numérico, como RNROAMORTIGUADOR=4717012798): es mejor
+    sugerir ese candidato, aunque sea numérico, que no sugerir nada y dejar
+    que la UI caiga por defecto a la fila 0 (que casi nunca es la clave).
+
+    Si NINGUNA fila tiene valores 100% únicos (exports reales a veces
+    repiten un código en variantes distintas del mismo modelo), se ofrece
+    como último recurso la fila con más valores casi-únicos (mayor
+    proporción de distintos/total, con más valores en total como
+    desempate) en vez de no sugerir nada."""
+    candidato_numerico: int | None = None
+    mejor_aprox: tuple[float, int, int] | None = None  # (proporción, r, total)
     for r, row in enumerate(grid):
         valores = [c.strip() for c in row[primera_col:] if c.strip() != ""]
         if len(valores) < 2:
             continue
-        if len(set(valores)) != len(valores):
+
+        distintos = len(set(valores))
+        if distintos != len(valores):
+            proporcion = distintos / len(valores)
+            candidato = (proporcion, r, len(valores))
+            if mejor_aprox is None or candidato[0] > mejor_aprox[0]:
+                mejor_aprox = candidato
             continue  # tiene repetidos: no puede ser clave única
+
         try:
-            [float(v) for v in valores]
-            continue  # es puramente numérica: probablemente no es el código
+            nums = [float(v) for v in valores]
         except ValueError:
-            return r
-    return None
+            return r  # candidato de texto, 100% único: se prefiere siempre
+        else:
+            # una secuencia consecutiva (1, 2, 3, ...) es un índice
+            # autogenerado, no un código real: no calificar como candidato.
+            if all(b - a == 1 for a, b in zip(nums, nums[1:])):
+                continue
+            if candidato_numerico is None:
+                candidato_numerico = r
+
+    if candidato_numerico is not None:
+        return candidato_numerico
+    return mejor_aprox[1] if mejor_aprox is not None else None
 
 
 # ---------------------------------------------------------------------------
@@ -231,14 +261,21 @@ def build_profile_columnas(machine_id: str, nombre: str, descripcion: str,
     campos = []
 
     for r in range(max_fila + 1):
-        etiqueta = (grid[r][0] if r < len(grid) and grid[r] else "").strip()
+        # `etiqueta` se guarda SIN recortar: es la celda de columna 0, que
+        # datastore._grid_columnas() vuelve a escribir tal cual al
+        # reconstruir el archivo (round-trip byte a byte). Si se guardara
+        # recortada, un espacio final/inicial legítimo en el export original
+        # (p. ej. "Modelos Amortiguador ") se perdería en cada reconstrucción.
+        # `etiqueta_ui` (recortada) es solo para título/slug sugeridos.
+        etiqueta = grid[r][0] if r < len(grid) and grid[r] else ""
+        etiqueta_ui = etiqueta.strip()
 
         if r == clave_row:
             c = elegidas_por_fila.get(r, {})
             campos.append({
-                "nombre_interno": c.get("nombre_interno") or _slug(etiqueta, r, used_names),
+                "nombre_interno": c.get("nombre_interno") or _slug(etiqueta_ui, r, used_names),
                 "rol": "clave", "fila": r, "etiqueta": etiqueta,
-                "tipo": "texto", "titulo_ui": c.get("titulo_ui") or etiqueta or "Código",
+                "tipo": "texto", "titulo_ui": c.get("titulo_ui") or etiqueta_ui or "Código",
                 "visible": True,
             })
             continue
@@ -248,7 +285,7 @@ def build_profile_columnas(machine_id: str, nombre: str, descripcion: str,
             campo = {
                 "nombre_interno": c["nombre_interno"], "rol": "parametro",
                 "fila": r, "etiqueta": etiqueta,
-                "tipo": c.get("tipo", "texto"), "titulo_ui": c.get("titulo_ui") or etiqueta,
+                "tipo": c.get("tipo", "texto"), "titulo_ui": c.get("titulo_ui") or etiqueta_ui,
                 "visible": True,
             }
             if c.get("formato"):
@@ -287,9 +324,9 @@ def build_profile_columnas(machine_id: str, nombre: str, descripcion: str,
             # Campo oculto: preserva cada celda cruda por registro, viaja con
             # alta/baja, nunca se muestra ni se edita.
             campos.append({
-                "nombre_interno": _slug(etiqueta or f"oculto_{r}", r, used_names),
+                "nombre_interno": _slug(etiqueta_ui or f"oculto_{r}", r, used_names),
                 "rol": "parametro", "fila": r, "etiqueta": etiqueta,
-                "tipo": "texto", "titulo_ui": etiqueta or f"Fila {r + 1}",
+                "tipo": "texto", "titulo_ui": etiqueta_ui or f"Fila {r + 1}",
                 "visible": False,
             })
 
@@ -417,9 +454,12 @@ def build_scaffold(machine_id: str, nombre: str, descripcion: str,
         used_names: set[str] = set()
         campos = []
         for r, row in enumerate(grid):
-            etiqueta = (row[0] if row else "").strip()
+            # sin recortar: se reescribe tal cual al reconstruir el archivo
+            # (ver comentario equivalente en build_profile_columnas).
+            etiqueta = row[0] if row else ""
+            etiqueta_ui = etiqueta.strip()
             es_clave = r == clave_row
-            titulo = etiqueta or ("Código" if es_clave else f"Fila {r + 1}")
+            titulo = etiqueta_ui or ("Código" if es_clave else f"Fila {r + 1}")
             if es_clave:
                 sug = {"tipo": "texto", "formato": {}}
             else:
