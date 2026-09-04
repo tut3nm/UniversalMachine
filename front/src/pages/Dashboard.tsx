@@ -18,7 +18,7 @@ export default function Dashboard() {
   }, []);
 
   return (
-    <div>
+    <div className="pagina">
       <Header />
       <h1>Máquinas</h1>
       <p className="muted">Elegí una máquina para ver y editar sus recetas.</p>

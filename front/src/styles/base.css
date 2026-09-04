@@ -1,0 +1,269 @@
+/* ---------------------------------------------------------------------
+   Base: reset mínimo, tipografía, controles de formulario y las clases
+   genéricas que ya usaban las páginas (card, badge, table-wrap, toolbar,
+   breadcrumbs, muted, error, empty-state), re-apoyadas en los tokens
+   nuevos. Los componentes propios de la app viven en ui.css.
+--------------------------------------------------------------------- */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--texto-md);
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Cifras alineadas en columna: la app es sobre todo códigos y números. */
+table,
+input,
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 0 0 0.75rem;
+  color: var(--text);
+}
+
+h1 {
+  font-size: var(--texto-2xl);
+}
+
+h2 {
+  font-size: var(--texto-xl);
+}
+
+h3 {
+  font-size: var(--texto-lg);
+}
+
+p {
+  margin: 0.5rem 0;
+}
+
+a {
+  color: var(--primary);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+code,
+pre,
+.mono {
+  font-family: var(--font-mono);
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* --- Layout de las páginas "sueltas" (Dashboard, Mediciones, …) ------- */
+.pagina {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 1.5rem 3rem;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 0;
+  border-bottom: 3px solid var(--primary);
+  margin-bottom: 1.75rem;
+}
+
+.app-header .brand {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  color: var(--text);
+}
+
+.app-header .brand:hover {
+  text-decoration: none;
+}
+
+.app-header .brand-mark {
+  font-weight: 600;
+  font-size: var(--texto-xl);
+  color: var(--primary-dark);
+}
+
+.app-header .brand-sub {
+  color: var(--muted);
+  font-size: var(--texto-sm);
+}
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: var(--texto-sm);
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.breadcrumbs .sep {
+  color: var(--muted);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radio-lg);
+  box-shadow: var(--sombra);
+  padding: 1.25rem 1.5rem;
+}
+
+/* --- Controles de formulario ------------------------------------------ */
+input,
+select,
+textarea {
+  font-family: var(--font-ui);
+  font-size: var(--texto-md);
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radio);
+  background: var(--surface);
+  color: var(--text);
+  width: 100%;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 0;
+  border-color: var(--primary);
+}
+
+input:disabled,
+select:disabled {
+  background: var(--surface-alt);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+label {
+  font-weight: 600;
+  font-size: var(--texto-sm);
+}
+
+/* --- Tablas genéricas (Dashboard, Backups, Historial, Mediciones) ------ */
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radio-lg);
+  background: var(--surface);
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: var(--texto-md);
+}
+
+th,
+td {
+  padding: 0.6rem 0.9rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+th {
+  background: var(--surface-alt);
+  font-weight: 600;
+  color: var(--text);
+  border-bottom: 1px solid var(--border-strong);
+}
+
+tbody tr:hover {
+  background: var(--row-hover);
+}
+
+tr.row-warn {
+  background: var(--warning-soft);
+}
+
+tr.row-error {
+  background: var(--danger-soft);
+}
+
+/* --- Badges ------------------------------------------------------------ */
+.badge {
+  display: inline-block;
+  padding: 0.1rem 0.6rem;
+  border-radius: 999px;
+  font-size: var(--texto-xs);
+  font-weight: 600;
+}
+
+.badge-ok {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.badge-warn {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.badge-error {
+  background: var(--danger-soft);
+  color: var(--danger-dark);
+}
+
+/* --- Utilidades --------------------------------------------------------- */
+.muted {
+  color: var(--muted);
+}
+
+.error {
+  color: var(--danger-dark);
+  background: var(--danger-soft);
+  border: 1px solid var(--danger);
+  border-radius: var(--radio);
+  padding: 0.6rem 0.9rem;
+  font-weight: 500;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.empty-state {
+  padding: 2rem;
+  text-align: center;
+  color: var(--muted);
+}
+
+.search-bar {
+  max-width: 420px;
+  margin-bottom: 1.25rem;
+}

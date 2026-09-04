@@ -1,0 +1,76 @@
+/* ---------------------------------------------------------------------
+   Tokens de diseño — paleta "azul acero" + IBM Plex Sans.
+
+   La DISTRIBUCIÓN de la interfaz se copia tal cual del Configurador de
+   Planta de escritorio (máquina232/src/app.py); los COLORES no: el verde
+   hoja del escritorio se reemplaza por esta paleta. La correspondencia,
+   para no perder el significado de ningún color, es:
+
+     GREEN  #4E9A51 (acción principal, header) -> --primary
+     GREEN_DARK #3C7A3F (títulos, hover)       -> --primary-dark
+     GREEN_LIGHT #E7F1E3 (hover de fila/tarj.) -> --primary-soft
+     RED #B4472E / RED_DARK #8F3623            -> --danger / --danger-dark
+     AMBER #C77A00 (advertencias)              -> --warning
+     MUTED #727A71 / TEXT #2B2F2B              -> --muted / --text
+
+   El verde queda reservado SOLO para confirmaciones de éxito
+   (--success): en el escritorio "guardado bien" y "acción principal"
+   compartían color y se confundían.
+--------------------------------------------------------------------- */
+:root {
+  /* -- superficies ------------------------------------------------- */
+  --bg: #f5f7fa;
+  --surface: #ffffff;
+  --surface-alt: #eef2f7;
+  --border: #d8dee6;
+  --border-strong: #b7c1cd;
+
+  /* -- texto ------------------------------------------------------- */
+  --text: #15202b;
+  --muted: #5a6b7c;
+  --on-primary: #ffffff;
+
+  /* -- acción ------------------------------------------------------ */
+  --primary: #1d4e7c;
+  --primary-dark: #143a5d;
+  --primary-soft: #e4edf5;
+
+  /* -- estados ----------------------------------------------------- */
+  --success: #2e7d4f;
+  --success-soft: #e2f0e8;
+  --danger: #b3261e;
+  --danger-dark: #8c1d17;
+  --danger-soft: #fae5e3;
+  --warning: #b26a00;
+  --warning-soft: #fbeeda;
+
+  /* -- tabla ------------------------------------------------------- */
+  --row-alt: #fafbfc;
+  --row-hover: var(--primary-soft);
+  --fila-alto: 34px;
+
+  /* -- tipografía --------------------------------------------------- */
+  --font-ui: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", Consolas, "Courier New", monospace;
+
+  --texto-xs: 0.8125rem; /* 13px — pie de tabla, badges */
+  --texto-sm: 0.9375rem; /* 15px — ayudas, textos secundarios */
+  --texto-md: 1rem; /*      16px — base: tabla, formularios */
+  --texto-lg: 1.125rem; /*  18px — subtítulos */
+  --texto-xl: 1.375rem; /*  22px — título de diálogo */
+  --texto-2xl: 1.625rem; /* 26px — título de página */
+
+  /* -- geometría ---------------------------------------------------- */
+  --radio: 6px;
+  --radio-lg: 10px;
+  --sombra: 0 1px 2px rgba(21, 32, 43, 0.08);
+  --sombra-flotante: 0 8px 28px rgba(21, 32, 43, 0.18);
+  --header-alto: 64px;
+  --estado-alto: 34px;
+
+  /* -- capas -------------------------------------------------------- */
+  --z-menu: 40;
+  --z-modal: 50;
+  --z-tooltip: 60;
+  --z-toast: 70;
+}

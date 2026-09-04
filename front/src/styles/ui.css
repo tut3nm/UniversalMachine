@@ -1,0 +1,730 @@
+/* ---------------------------------------------------------------------
+   Componentes propios: botones, toolbar, modal, toast, tooltip, menú
+   desplegable, barra de estado y el armazón de la pantalla de máquina.
+   La distribución replica la ventana principal del escritorio
+   (máquina232/src/app.py:3366, _build_ui).
+--------------------------------------------------------------------- */
+
+/* =====================================================================
+   Botón — equivale a app.py:139 (button()).
+   primary=acción principal · danger=destructiva · secondary=neutra
+   frecuente · outline / outline-danger=secundaria · ghost=terciaria
+   · light=sobre el header de color.
+   ===================================================================== */
+.ui-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  font-family: var(--font-ui);
+  font-size: var(--texto-md);
+  font-weight: 500;
+  line-height: 1.2;
+  padding: 0.45rem 0.9rem;
+  border-radius: var(--radio);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: none;
+}
+
+/* `pointer-events: none` deja que el tooltip del botón deshabilitado
+   siga apareciendo: el evento lo recibe el span que lo envuelve. */
+.ui-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.ui-btn--sm {
+  font-size: var(--texto-sm);
+  padding: 0.3rem 0.65rem;
+}
+
+.ui-btn--block {
+  width: 100%;
+}
+
+.ui-btn--primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+}
+
+.ui-btn--primary:hover:not(:disabled) {
+  background: var(--primary-dark);
+  border-color: var(--primary-dark);
+}
+
+.ui-btn--danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--on-primary);
+}
+
+.ui-btn--danger:hover:not(:disabled) {
+  background: var(--danger-dark);
+  border-color: var(--danger-dark);
+}
+
+.ui-btn--secondary {
+  background: var(--surface);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.ui-btn--secondary:hover:not(:disabled) {
+  background: var(--surface-alt);
+}
+
+.ui-btn--outline {
+  background: transparent;
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.ui-btn--outline:hover:not(:disabled) {
+  background: var(--primary-soft);
+}
+
+.ui-btn--outline-danger {
+  background: transparent;
+  border-color: var(--danger);
+  color: var(--danger-dark);
+}
+
+.ui-btn--outline-danger:hover:not(:disabled) {
+  background: var(--danger-soft);
+}
+
+.ui-btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--primary);
+}
+
+.ui-btn--ghost:hover:not(:disabled) {
+  background: var(--primary-soft);
+}
+
+.ui-btn--light {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.55);
+  color: var(--on-primary);
+}
+
+.ui-btn--light:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.26);
+}
+
+/* =====================================================================
+   Tooltip
+   ===================================================================== */
+.ui-tooltip-anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+.ui-tooltip {
+  position: fixed;
+  z-index: var(--z-tooltip);
+  max-width: 22rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--radio);
+  background: var(--text);
+  color: var(--surface);
+  font-size: var(--texto-xs);
+  line-height: 1.35;
+  box-shadow: var(--sombra-flotante);
+  pointer-events: none;
+}
+
+/* =====================================================================
+   Modal — header de color + cuerpo con scroll + footer de botones,
+   igual que los Toplevel del escritorio.
+   ===================================================================== */
+.ui-modal-fondo {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  background: rgba(21, 32, 43, 0.42);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 4vh 1rem;
+  overflow: auto;
+}
+
+.ui-modal {
+  background: var(--surface);
+  border-radius: var(--radio-lg);
+  box-shadow: var(--sombra-flotante);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  max-height: 88vh;
+  overflow: hidden;
+}
+
+.ui-modal__header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 52px;
+  padding: 0 1.1rem;
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.ui-modal--peligro .ui-modal__header {
+  background: var(--danger);
+}
+
+.ui-modal__titulo {
+  font-size: var(--texto-lg);
+  font-weight: 600;
+  margin: 0;
+  color: var(--on-primary);
+}
+
+.ui-modal__cerrar {
+  margin-left: auto;
+  background: transparent;
+  border: 0;
+  color: var(--on-primary);
+  font-size: 1.4rem;
+  line-height: 1;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radio);
+  cursor: pointer;
+}
+
+.ui-modal__cerrar:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.ui-modal__cuerpo {
+  padding: 1rem 1.1rem;
+  overflow: auto;
+}
+
+.ui-modal__ayuda {
+  color: var(--muted);
+  font-size: var(--texto-sm);
+  margin: 0 0 0.9rem;
+}
+
+.ui-modal__footer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.1rem;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+/* El escritorio ancla acciones auxiliares a la izquierda y las
+   principales a la derecha; este separador reproduce ese reparto. */
+.ui-modal__footer-sep {
+  flex: 1;
+}
+
+/* --- Formulario de alta / edición de registro ------------------------- */
+.reg-campo {
+  margin-bottom: 0.9rem;
+}
+
+.reg-campo label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+  font-size: var(--texto-md);
+  color: var(--text);
+}
+
+.reg-entrada {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.reg-ayuda {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: var(--texto-sm);
+  white-space: nowrap;
+}
+
+/* --- Filtros avanzados -------------------------------------------------- */
+.flt-tabla {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.flt-fila {
+  display: grid;
+  grid-template-columns: 1fr 5.5rem auto 5.5rem;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.flt-titulo {
+  font-weight: 600;
+  font-size: var(--texto-sm);
+}
+
+.flt-input {
+  text-align: center;
+}
+
+.flt-a {
+  color: var(--muted);
+  font-size: var(--texto-sm);
+  text-align: center;
+}
+
+.flt-acciones {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.flt-guardar {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.flt-subtitulo {
+  font-size: var(--texto-sm);
+  color: var(--muted);
+  margin: 0 0 0.4rem;
+}
+
+.flt-presets {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.flt-preset {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radio);
+  background: var(--surface);
+}
+
+.flt-preset span {
+  flex: 1;
+  font-size: var(--texto-sm);
+}
+
+/* --- Contenido de los diálogos de confirmación y aviso ---------------- */
+.dlg-mensaje {
+  white-space: pre-line;
+  font-size: var(--texto-md);
+  line-height: 1.5;
+}
+
+.dlg-tipeo {
+  display: block;
+  margin-top: 1rem;
+  font-size: var(--texto-sm);
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.dlg-tipeo input {
+  margin-top: 0.35rem;
+}
+
+/* =====================================================================
+   Toast — esquina inferior derecha, 2,6 s, como ToastNotification.
+   ===================================================================== */
+.ui-toasts {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+
+.ui-toast {
+  min-width: 16rem;
+  max-width: 26rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--radio);
+  border-left: 4px solid var(--success);
+  background: var(--surface);
+  box-shadow: var(--sombra-flotante);
+  font-size: var(--texto-sm);
+}
+
+.ui-toast--exito {
+  border-left-color: var(--success);
+}
+
+.ui-toast--aviso {
+  border-left-color: var(--warning);
+}
+
+.ui-toast--error {
+  border-left-color: var(--danger);
+}
+
+.ui-toast__titulo {
+  font-weight: 600;
+  font-size: var(--texto-xs);
+  color: var(--muted);
+  margin-bottom: 0.1rem;
+}
+
+/* =====================================================================
+   Menú desplegable (Exportar ▾)
+   ===================================================================== */
+.ui-menu {
+  position: fixed;
+  z-index: var(--z-menu);
+  min-width: 16rem;
+  padding: 0.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra-flotante);
+}
+
+.ui-menu__item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.45rem 0.6rem;
+  border: 0;
+  border-radius: var(--radio);
+  background: transparent;
+  font-size: var(--texto-sm);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.ui-menu__item:hover {
+  background: var(--primary-soft);
+}
+
+/* =====================================================================
+   Pantalla de máquina — armazón de tres franjas: header, contenido,
+   barra de estado (app.py:_build_ui).
+   ===================================================================== */
+.mq {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--bg);
+}
+
+.mq__header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  height: var(--header-alto);
+  flex: 0 0 var(--header-alto);
+  padding: 0 1.4rem;
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.mq__titulo {
+  font-size: var(--texto-xl);
+  font-weight: 600;
+  margin: 0;
+  color: var(--on-primary);
+}
+
+.mq__titulo,
+.mq__header-acciones {
+  flex: 0 0 auto;
+}
+
+.mq__descripcion {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--texto-sm);
+  color: rgba(255, 255, 255, 0.82);
+  align-self: flex-end;
+  padding-bottom: 0.45rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mq__header-acciones {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* --- Toolbar ----------------------------------------------------------
+   Dos grupos que no se rompen por dentro: el de acciones sobre registros
+   y el de utilidades del archivo. Si la ventana no da para los dos en una
+   línea, el segundo baja entero y sigue alineado a la derecha, en vez de
+   que los botones se repartan sueltos entre renglones. */
+.mq__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+  flex-wrap: wrap;
+  padding: 0.7rem 1rem;
+  background: var(--bg);
+}
+
+.mq__toolbar-izq,
+.mq__toolbar-der {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.mq__toolbar-der {
+  margin-left: auto;
+}
+
+.mq__sep {
+  width: 1px;
+  align-self: stretch;
+  margin: 0.15rem 0.5rem;
+  background: var(--border-strong);
+}
+
+.mq__buscador {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 0.55rem;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radio);
+}
+
+.mq__buscador:focus-within {
+  outline: 2px solid var(--primary);
+  border-color: var(--primary);
+}
+
+.mq__buscador input {
+  border: 0;
+  outline: 0;
+  padding: 0.4rem 0;
+  width: 13rem;
+  background: transparent;
+}
+
+.mq__buscador-icono,
+.mq__buscador-ayuda {
+  color: var(--muted);
+  font-size: var(--texto-sm);
+  white-space: nowrap;
+}
+
+/* --- Toggle de slots vacíos ------------------------------------------ */
+.mq__toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0 1rem 0.5rem;
+  font-size: var(--texto-sm);
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+}
+
+.mq__toggle input {
+  width: auto;
+  accent-color: var(--primary);
+}
+
+/* --- Tabla ------------------------------------------------------------ */
+.mq__tabla-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0 1rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radio);
+  background: var(--surface);
+  overflow: auto;
+}
+
+/* `table-layout: fixed` es obligatorio con la tabla virtualizada: con el
+   ancho automático, cada ventana de filas que entra recalcularía el ancho de
+   las columnas según su propio contenido y las columnas bailarían al hacer
+   scroll. Con anchos fijos, la tabla se comporta como la del escritorio. */
+.mq__tabla {
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  font-size: var(--texto-md);
+}
+
+.mq__tabla thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-alt);
+  border-bottom: 1px solid var(--border-strong);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Alto de celda fijo: la virtualización calcula las posiciones con
+   `--fila-alto`, así que el contenido nunca debe estirar una fila. */
+.mq__tabla th,
+.mq__tabla td {
+  height: var(--fila-alto);
+  padding: 0 0.7rem;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mq__tabla tbody tr:nth-child(even) {
+  background: var(--row-alt);
+}
+
+.mq__tabla tbody tr:hover {
+  background: var(--row-hover);
+}
+
+.mq__tabla tbody tr[aria-selected="true"],
+.mq__tabla tbody tr.mq__fila-marcada {
+  background: var(--primary-soft);
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+
+/* Filas que ocupan el lugar de lo que todavía no bajó del servidor y las
+   dos espaciadoras que reservan el alto del resto del catálogo. */
+.mq__fila-cargando td {
+  color: var(--border-strong);
+}
+
+.mq__espaciador td {
+  padding: 0;
+  border: 0;
+}
+
+.mq__col-pos {
+  width: 64px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.mq__col-clave {
+  width: auto;
+  text-align: left;
+}
+
+.mq__col-param {
+  width: 9rem;
+  text-align: center;
+}
+
+.mq__fila-placeholder td {
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* Editor de una celda: ocupa exactamente el lugar del texto que reemplaza. */
+.mq__editor-celda {
+  width: 100%;
+  height: calc(var(--fila-alto) - 6px);
+  padding: 0 0.35rem;
+  border: 2px solid var(--primary);
+  border-radius: 3px;
+  font-size: var(--texto-md);
+  text-align: inherit;
+}
+
+.mq__editor-celda:focus {
+  outline: none;
+}
+
+/* --- Pie de modo eliminación ----------------------------------------- */
+.mq__pie-borrado {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 1rem 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--danger);
+  border-radius: var(--radio);
+  background: var(--danger-soft);
+  font-size: var(--texto-sm);
+  color: var(--danger-dark);
+}
+
+.mq__pie-borrado .ui-btn:first-of-type {
+  margin-left: auto;
+}
+
+/* --- Barra de estado -------------------------------------------------- */
+.mq__estado {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  height: var(--estado-alto);
+  flex: 0 0 var(--estado-alto);
+  padding: 0 0.9rem;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  font-size: var(--texto-xs);
+  color: var(--muted);
+}
+
+.mq__estado--aviso {
+  color: var(--warning);
+  font-weight: 600;
+}
+
+.mq__estado--error {
+  color: var(--danger-dark);
+  font-weight: 600;
+}
+
+.mq__estado-cuenta {
+  margin-left: auto;
+  color: var(--primary-dark);
+  font-weight: 600;
+}
+
+.mq__estado-version {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: var(--muted);
+  font-size: var(--texto-xs);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* --- Estado de carga / error a pantalla completa ---------------------- */
+.mq__centro {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  color: var(--muted);
+}

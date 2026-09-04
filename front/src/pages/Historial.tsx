@@ -24,7 +24,7 @@ export default function Historial() {
   }, [id]);
 
   return (
-    <div>
+    <div className="pagina">
       <Header />
       <p className="breadcrumbs">
         <Link to="/">Máquinas</Link>

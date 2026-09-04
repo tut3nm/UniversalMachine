@@ -11,7 +11,9 @@ from starlette.responses import FileResponse
 
 from app import _bootstrap  # noqa: F401  (side effect: agrega app/core/ a sys.path)
 import instancia
+import log_config
 import paths
+import version
 
 from app.routers import consulta as consulta_router
 from app.routers import maquinas as maquinas_router
@@ -67,6 +69,18 @@ app.include_router(mediciones_router.router)
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/api/info")
+def info():
+    """Datos del "Acerca de" y de la barra de estado: los mismos que muestra
+    `App.on_about` en el escritorio (máquina232/src/app.py:3998)."""
+    return {
+        "titulo": "Configurador de Parámetros de Planta",
+        "version": version.APP_VERSION,
+        "compilacion": version.FECHA_COMPILACION,
+        "log_dir": log_config.log_dir(),
+    }
 
 
 if os.path.isdir(FRONT_DIST):

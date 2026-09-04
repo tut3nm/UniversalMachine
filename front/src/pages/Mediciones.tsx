@@ -51,7 +51,7 @@ export default function Mediciones() {
   };
 
   return (
-    <div>
+    <div className="pagina">
       <Header />
       <p className="breadcrumbs">
         <Link to="/">Máquinas</Link>

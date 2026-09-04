@@ -37,7 +37,7 @@ export default function Backups() {
   };
 
   return (
-    <div>
+    <div className="pagina">
       <Header />
       <p className="breadcrumbs">
         <Link to="/">Máquinas</Link>
