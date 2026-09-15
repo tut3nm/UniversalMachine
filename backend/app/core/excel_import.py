@@ -83,9 +83,23 @@ def es_csv(path: str) -> bool:
     return path.lower().endswith(".csv")
 
 
+def _leer_texto_csv(path: str) -> list[str]:
+    """Lee el CSV probando encodings en orden, igual que `structure.read_text_file`
+    para las mediciones: los exports de planta no siempre son UTF-8 (Excel suele
+    guardarlos en cp1252/latin-1), y un archivo así no debería tumbar la
+    importación con un UnicodeDecodeError."""
+    for enc in ("utf-8-sig", "cp1252", "latin-1"):
+        try:
+            with open(path, encoding=enc, newline="") as f:
+                return f.readlines()
+        except UnicodeDecodeError:
+            continue
+    with open(path, encoding="latin-1", errors="replace", newline="") as f:
+        return f.readlines()
+
+
 def abrir_csv(path: str, delimitador: str = ",") -> WorkbookCSV:
-    with open(path, encoding="utf-8-sig", newline="") as f:
-        filas = [list(fila) for fila in csv.reader(f, delimiter=delimitador)]
+    filas = [list(fila) for fila in csv.reader(_leer_texto_csv(path), delimiter=delimitador)]
     return WorkbookCSV(filas)
 
 

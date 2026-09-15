@@ -1,0 +1,6 @@
+#Codigo;004981003234
+#Operacion;26
+#Descripcion;824902004031
+
+* #Maquina;<idMaquinas>;<default>;<GPH>;<TEP>;<MUL>;<DIV>
+#Maquina;1200009;True;;26.00;1;1

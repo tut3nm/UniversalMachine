@@ -97,6 +97,17 @@ def test_abrir_csv_con_delimitador_punto_y_coma(tmp_path):
     assert excel_import.read_headers(wb, "CSV") == ["Codigo", "Gramos"]
 
 
+def test_abrir_csv_tolera_encoding_cp1252(tmp_path):
+    """Un export de planta guardado en cp1252 (con tildes/ñ) no debe tumbar
+    la importación con un UnicodeDecodeError."""
+    p = tmp_path / "datos.csv"
+    p.write_bytes("Codigo;Descripción\nA1;Válvula pequeña\n".encode("cp1252"))
+    wb = excel_import.abrir_csv(str(p), delimitador=";")
+    assert excel_import.read_headers(wb, "CSV") == ["Codigo", "Descripción"]
+    rows = excel_import.read_rows_generic(wb, "CSV", {"code": 0, "desc": 1})
+    assert rows == [{"code": "A1", "desc": "Válvula pequeña"}]
+
+
 # -- _strip_accents (Nivel 5: cobertura completa vía unicodedata) -------------
 def test_strip_accents_cubre_vocales_con_tilde():
     assert excel_import._strip_accents("código") == "codigo"

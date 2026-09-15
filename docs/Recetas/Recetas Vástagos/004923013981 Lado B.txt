@@ -1,0 +1,7 @@
+#Codigo;004923013981
+#Operacion;Lado B
+#Descripcion;Mecanizado Esp. Montaje
+
+* #Maquina;<idMaquinas>;<default>;<GPH>;<TEP>;<MUL>;<DIV>
+#Maquina;1200007;True;;21.66;1;1
+#Maquina;1200008;True;;21.66;1;1

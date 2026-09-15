@@ -1,0 +1,57 @@
+Datum,28.08.26
+Uhrzeit,04:34:10
+[Auftragsdaten]
+Pruefauftragsnummer     ,824902015333.mpg
+Kommentar1              ,
+Kommentar2              ,
+Kommentar3              ,
+Kommentar4              ,
+Fuelldruck              ,
+Kunde                   ,renauld
+Kundennummer            ,
+Typ                     ,
+Teilenummer             ,
+Fahrzeugachse           ,
+VANummer                ,
+Ventilbestnummer        ,
+Oelsorte                ,
+OelfuellmengeCCM        ,
+OelfuellmengeG          ,
+Montageart              ,
+Kennzeichnung           ,
+Prueflingstartnummer    ,1
+Prueflinganzahl         ,1000
+Auswerteverfahren       ,Produktion
+Auswertefenster         ,50
+Maximalkraft            ,1150
+Kolbenstangendurchm     ,25
+Pruefer                 ,
+Einricht-Teil 1         ,
+Einricht-Teil 2         ,
+Einricht-Teil 3         ,
+Einricht-Teil 4         ,
+Einricht-Teil 5         ,
+Einricht-Teil 6         ,
+Einricht-Teil 7         ,
+Einricht-Teil 8         ,
+Einricht-Teil 9         ,
+Einricht-Teil 10        ,
+Greifposition           ,1323
+Grundstellungsposition  ,1475
+Ausziehposition         ,1350
+
+[Messprogrammseite 1]
+Zyklen,Hub,Mittelpos,Geschw,ZugOG-A1,ZugUG-A1,DruckOG-A1,DruckUG-A1
+2,75,1335,0.262,0,0,0,0,4621242,4613528,4200380,4580856
+0,4,10,0.005,0,0,1000,0,4621242,4613528,4200380,4580856
+0,0,0,0.000,0,0,10000,0,4621242,4613528,4200380,4580856
+1,75,1366,0.524,2750,1770,10000,0,4621242,4613528,4200380,4580856
+0,50,1340,0.050,200,110,310,200,4621242,4613528,4200380,4580856
+1,50,1335,0.100,510,380,710,530,4621242,4613528,4200380,4580856
+0,50,1340,0.200,1120,870,1100,860,4621242,4613528,4200380,4580856
+0,50,1340,0.300,1480,1160,1330,1050,4621242,4613528,4200380,4580856
+1,75,1335,0.400,1860,1400,1530,1200,4621242,4613528,4200380,4580856
+# QSStat
+
+Datum,Uhrzeit,Achse,Bewertung,Nummer,Reibung,Ask,Temp,Barcode,Ventil,ZugV1,DruckV1,ZugV2,DruckV2,ZugV3,DruckV3,ZugV4,DruckV4,ZugV5,DruckV5,ZugV6,DruckV6,ZugV7,DruckV7,ZugV8,DruckV8,ZugV9,DruckV9,ZugV10,DruckV10
+28.08.26,04:34:10,A1,NIO,1,0,0,0, ,VE1,1878,1570,   0,   0, 316, 384,   0,   0,   0,   0,1588,1380,   0,   0,   0,   0,   0,   0,   0,   0,

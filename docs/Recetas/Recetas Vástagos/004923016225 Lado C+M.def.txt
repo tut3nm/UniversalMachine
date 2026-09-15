@@ -1,0 +1,8 @@
+#Codigo;004923016225
+#Operacion;Lado C+M
+#Descripcion;COMPLETO S/ROSCA-VASTAGO
+
+* #Maquina;<idMaquinas>;<default>;<GPH>;<TEP>;<MUL>;<DIV>
+#Maquina;1200004;True;;72.00;1;1
+#Maquina;1200005;True;;80.00;1;1
+#Maquina;1200006;True;;80.00;1;1

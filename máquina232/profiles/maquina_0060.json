@@ -1,0 +1,294 @@
+{
+  "id": "0060",
+  "nombre": "0060 - Selladora HD",
+  "descripcion": "",
+  "archivo_inicial": "Modelos_Export (1)_utf8.csv",
+  "archivo": {
+    "extension": "csv",
+    "delimitador": ";",
+    "encoding": "utf-8",
+    "bom": true,
+    "fin_de_linea": "CRLF",
+    "orientacion": "columnas"
+  },
+  "estructura": {
+    "columna_etiquetas": 0,
+    "primera_columna_datos": 1,
+    "filas_fijas": [
+      {
+        "fila": 0,
+        "celdas": [
+          "List separator=",
+          "Decimal symbol=,"
+        ],
+        "rellenar": true
+      },
+      {
+        "fila": 1,
+        "celdas": [
+          "Modelos Amortiguador "
+        ],
+        "rellenar": true
+      }
+    ],
+    "fila_indice": {
+      "fila": 3,
+      "etiqueta": "1",
+      "base": 1
+    }
+  },
+  "campos": [
+    {
+      "nombre_interno": "langid_c0a",
+      "rol": "clave",
+      "fila": 2,
+      "etiqueta": "LANGID_c0a",
+      "tipo": "texto",
+      "titulo_ui": "LANGID_c0a",
+      "visible": true
+    },
+    {
+      "nombre_interno": "rnroamortiguador",
+      "rol": "parametro",
+      "fila": 4,
+      "etiqueta": "RNROAMORTIGUADOR",
+      "tipo": "texto",
+      "titulo_ui": "RNROAMORTIGUADOR",
+      "visible": true
+    },
+    {
+      "nombre_interno": "rversion",
+      "rol": "parametro",
+      "fila": 5,
+      "etiqueta": "RVERSION",
+      "tipo": "texto",
+      "titulo_ui": "RVERSION",
+      "visible": true
+    },
+    {
+      "nombre_interno": "rcodaltboqu",
+      "rol": "parametro",
+      "fila": 6,
+      "etiqueta": "RCODALTBOQU",
+      "tipo": "entero",
+      "titulo_ui": "RCODALTBOQU",
+      "visible": true
+    },
+    {
+      "nombre_interno": "rgirorodillo",
+      "rol": "parametro",
+      "fila": 7,
+      "etiqueta": "RGIRORODILLO",
+      "tipo": "entero",
+      "titulo_ui": "RGIRORODILLO",
+      "visible": true
+    },
+    {
+      "nombre_interno": "rboquilla",
+      "rol": "parametro",
+      "fila": 8,
+      "etiqueta": "RBOQUILLA",
+      "tipo": "texto",
+      "titulo_ui": "RBOQUILLA",
+      "visible": true
+    },
+    {
+      "nombre_interno": "rboquilla1",
+      "rol": "parametro",
+      "fila": 9,
+      "etiqueta": "RBOQUILLA1",
+      "tipo": "texto",
+      "titulo_ui": "RBOQUILLA1",
+      "visible": true
+    },
+    {
+      "nombre_interno": "rrodredond",
+      "rol": "parametro",
+      "fila": 10,
+      "etiqueta": "RRODREDOND",
+      "tipo": "texto",
+      "titulo_ui": "RRODREDOND",
+      "visible": true
+    },
+    {
+      "nombre_interno": "resprodred",
+      "rol": "parametro",
+      "fila": 11,
+      "etiqueta": "RESPRODRED",
+      "tipo": "texto",
+      "titulo_ui": "RESPRODRED",
+      "visible": true
+    },
+    {
+      "nombre_interno": "rsoprol",
+      "rol": "parametro",
+      "fila": 12,
+      "etiqueta": "RSOPROL",
+      "tipo": "texto",
+      "titulo_ui": "RSOPROL",
+      "visible": true
+    },
+    {
+      "nombre_interno": "rarrastreinf",
+      "rol": "parametro",
+      "fila": 13,
+      "etiqueta": "RARRASTREINF",
+      "tipo": "texto",
+      "titulo_ui": "RARRASTREINF",
+      "visible": true
+    },
+    {
+      "nombre_interno": "rsupbase",
+      "rol": "parametro",
+      "fila": 14,
+      "etiqueta": "RSUPBASE",
+      "tipo": "texto",
+      "titulo_ui": "RSUPBASE",
+      "visible": true
+    },
+    {
+      "nombre_interno": "rtopecarrorolado",
+      "rol": "parametro",
+      "fila": 15,
+      "etiqueta": "RTOPECARROROLADO",
+      "tipo": "texto",
+      "titulo_ui": "RTOPECARROROLADO",
+      "visible": true
+    },
+    {
+      "nombre_interno": "rtopeapoyorol",
+      "rol": "parametro",
+      "fila": 16,
+      "etiqueta": "RTOPEAPOYOROL",
+      "tipo": "texto",
+      "titulo_ui": "RTOPEAPOYOROL",
+      "visible": true
+    },
+    {
+      "nombre_interno": "rfuerzaini",
+      "rol": "parametro",
+      "fila": 17,
+      "etiqueta": "RFUERZAINI",
+      "tipo": "entero",
+      "titulo_ui": "RFUERZAINI",
+      "visible": true
+    },
+    {
+      "nombre_interno": "rfuerzafin",
+      "rol": "parametro",
+      "fila": 18,
+      "etiqueta": "RFUERZAFIN",
+      "tipo": "entero",
+      "titulo_ui": "RFUERZAFIN",
+      "visible": true
+    },
+    {
+      "nombre_interno": "ralturamesainf",
+      "rol": "parametro",
+      "fila": 19,
+      "etiqueta": "RALTURAMESAINF",
+      "tipo": "decimal",
+      "titulo_ui": "RALTURAMESAINF",
+      "visible": true,
+      "formato": {
+        "decimales": 16,
+        "separador_decimal": ","
+      }
+    },
+    {
+      "nombre_interno": "ralturamesasup",
+      "rol": "parametro",
+      "fila": 20,
+      "etiqueta": "RALTURAMESASUP",
+      "tipo": "decimal",
+      "titulo_ui": "RALTURAMESASUP",
+      "visible": true,
+      "formato": {
+        "decimales": 16,
+        "separador_decimal": ","
+      }
+    },
+    {
+      "nombre_interno": "rcargagiro",
+      "rol": "parametro",
+      "fila": 21,
+      "etiqueta": "RCARGAGIRO",
+      "tipo": "entero",
+      "titulo_ui": "RCARGAGIRO",
+      "visible": true
+    },
+    {
+      "nombre_interno": "rcargalateral",
+      "rol": "parametro",
+      "fila": 22,
+      "etiqueta": "RCARGALATERAL",
+      "tipo": "entero",
+      "titulo_ui": "RCARGALATERAL",
+      "visible": true
+    },
+    {
+      "nombre_interno": "rprecargaaxial",
+      "rol": "parametro",
+      "fila": 23,
+      "etiqueta": "RPRECARGAAXIAL",
+      "tipo": "entero",
+      "titulo_ui": "RPRECARGAAXIAL",
+      "visible": true
+    },
+    {
+      "nombre_interno": "rtiempocalibrado",
+      "rol": "parametro",
+      "fila": 24,
+      "etiqueta": "RTIEMPOCALIBRADO",
+      "tipo": "entero",
+      "titulo_ui": "RTIEMPOCALIBRADO",
+      "visible": true
+    },
+    {
+      "nombre_interno": "rtiemporolado",
+      "rol": "parametro",
+      "fila": 25,
+      "etiqueta": "RTIEMPOROLADO",
+      "tipo": "entero",
+      "titulo_ui": "RTIEMPOROLADO",
+      "visible": true
+    },
+    {
+      "nombre_interno": "rtiempocargalat",
+      "rol": "parametro",
+      "fila": 26,
+      "etiqueta": "RTIEMPOCARGALAT",
+      "tipo": "entero",
+      "titulo_ui": "RTIEMPOCARGALAT",
+      "visible": true
+    },
+    {
+      "nombre_interno": "rrpmhusillo",
+      "rol": "parametro",
+      "fila": 27,
+      "etiqueta": "RRPMHUSILLO",
+      "tipo": "entero",
+      "titulo_ui": "RRPMHUSILLO",
+      "visible": true
+    },
+    {
+      "nombre_interno": "rcargalat_si_no",
+      "rol": "parametro",
+      "fila": 28,
+      "etiqueta": "RCARGALAT(SI-NO)",
+      "tipo": "entero",
+      "titulo_ui": "RCARGALAT(SI-NO)",
+      "visible": true
+    },
+    {
+      "nombre_interno": "rapoyocarlat_si_no",
+      "rol": "parametro",
+      "fila": 29,
+      "etiqueta": "RAPOYOCARLAT(SI-NO)",
+      "tipo": "entero",
+      "titulo_ui": "RAPOYOCARLAT(SI-NO)",
+      "visible": true
+    }
+  ],
+  "features": {}
+}

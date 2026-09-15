@@ -1,0 +1,29 @@
+********************
+***18:5:2018       17:42:25
+***ARCHIVO= 481700012632.Prod  CARRERA= 80
+***VELOC=125  31  0  0  0  (velocidades de testeo)
+***CPEXTSUP=761  682  0  0  0 (Tolerancia fuerza extendido velocidad 125)
+***CPEXTINF=623  454  0  0  0 (Tolerancia fuerza extendido velocidad 31)
+***CPCOMPSUP=93  41  0  0  0 (Tolerancia fuerza comprimido velocidad 125)
+***CPCOMPINF=69  27  0  0  0 (Tolerancia fuerza comprimido velocidad 31)
+***CPCAVIT=25 -25 25 -25
+***FZA[VEL] 70 mm/s 278 Kg  0 Kg (fuerza máxima del FV / entre 0 y 278)
+********************
+********************
+***18:5:2018       17:42:25
+***ARCHIVO= prod.481700012632.COP  CARRERA= 80
+***VELOC=125  31  0  0  0
+***CPEXTSUP=761  682  0  0  0
+***CPEXTINF=623  454  0  0  0
+***CPCOMPSUP=93  41  0  0  0
+***CPCOMPINF=69  27  0  0  0
+***CPCAVIT=25 -25 25 -25
+***FZA[VEL] 70 mm/s 278 Kg  0 Kg 
+********************
+18:5:2018       17:59:42 (fecha y hora)
+125 E690 C-86 Y+ V+ (Velocidad 125 valor de extendido 690 y comprimido 86)
+31 E579 C-40 Y+ V+  (Velocidad 31 valor de extendido 579 y comprimido 40)
+V70 F135 F+ (Valor de la Fuerza 135 a Velocidad 70)
+
+Todos los valores de fuerza están en kgf.
+         

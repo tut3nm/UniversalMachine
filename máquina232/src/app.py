@@ -1166,7 +1166,8 @@ class WizardMachineDialog(tk.Toplevel):
             store = DataStore.load(self._csv_path, prof)
             with open(self._csv_path, "rb") as f:
                 original = f.read()
-            regenerado = store.to_text().encode(prof.encoding)
+            encoding_regen = "utf-8-sig" if prof.bom else prof.encoding
+            regenerado = store.to_text().encode(encoding_regen)
             ok = original == regenerado
             n_registros = len(store.records)
         except (ValueError, ProfileError, OSError, UnicodeDecodeError) as exc:

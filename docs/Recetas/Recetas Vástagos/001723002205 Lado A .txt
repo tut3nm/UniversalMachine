@@ -1,0 +1,7 @@
+#Codigo;001723002205
+#Operacion;Lado A
+#Descripcion;Mecanizado Esp. Cabezal con Rosca
+
+* #Maquina;<idMaquinas>;<default>;<GPH>;<TEP>;<MUL>;<DIV>
+#Maquina;1200007;True;;35.26;1;1
+#Maquina;1200008;True;;35.26;1;1

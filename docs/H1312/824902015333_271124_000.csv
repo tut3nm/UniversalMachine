@@ -1,0 +1,61 @@
+Datum,27.11.24
+Uhrzeit,15:23:34
+[Auftragsdaten]
+Pruefauftragsnummer     ,824902015333.mpg
+Kommentar1              ,
+Kommentar2              ,
+Kommentar3              ,
+Kommentar4              ,
+Fuelldruck              ,
+Kunde                   ,VW
+Kundennummer            ,
+Typ                     ,TAREK
+Teilenummer             ,
+Fahrzeugachse           ,
+VANummer                ,
+Ventilbestnummer        ,
+Oelsorte                ,
+OelfuellmengeCCM        ,
+OelfuellmengeG          ,
+Montageart              ,
+Kennzeichnung           ,
+Prueflingstartnummer    ,1
+Prueflinganzahl         ,1000
+Auswerteverfahren       ,Produktion
+Auswertefenster         ,50
+Maximalkraft            ,1150
+Kolbenstangendurchm     ,25
+Pruefer                 ,
+Einricht-Teil 1         ,
+Einricht-Teil 2         ,
+Einricht-Teil 3         ,
+Einricht-Teil 4         ,
+Einricht-Teil 5         ,
+Einricht-Teil 6         ,
+Einricht-Teil 7         ,
+Einricht-Teil 8         ,
+Einricht-Teil 9         ,
+Einricht-Teil 10        ,
+Greifposition           ,1300
+Grundstellungsposition  ,1475
+Ausziehposition         ,1325
+
+[Messprogrammseite 1]
+Zyklen,Hub,Mittelpos,Geschw,ZugOG-A1,ZugUG-A1,DruckOG-A1,DruckUG-A1
+0,75,1330,0.262,0,0,0,0,4621242,4613528,4200380,4580856
+0,4,10,0.005,0,0,1000,0,4621242,4613528,4200380,4580856
+0,0,0,0.000,0,0,10000,0,4621242,4613528,4200380,4580856
+1,75,1365,0.524,10000,0,10000,0,4621242,4613528,4200380,4580856
+1,50,1330,0.050,320,210,760,570,4621242,4613528,4200380,4580856
+1,50,1330,0.100,820,630,1140,890,4621242,4613528,4200380,4580856
+1,50,1330,0.200,1670,1320,1490,1170,4621242,4613528,4200380,4580856
+1,50,1340,0.300,2070,1640,1780,1410,4621242,4613528,4200380,4580856
+1,75,1340,0.400,2370,1890,2050,1640,4621242,4613528,4200380,4580856
+# QSStat
+
+Datum,Uhrzeit,Achse,Bewertung,Nummer,Reibung,Ask,Temp,Barcode,Ventil,ZugV1,DruckV1,ZugV2,DruckV2,ZugV3,DruckV3,ZugV4,DruckV4,ZugV5,DruckV5,ZugV6,DruckV6,ZugV7,DruckV7,ZugV8,DruckV8,ZugV9,DruckV9,ZugV10,DruckV10
+27.11.24,15:23:34,A1,NIO,1,0,0,0, ,VE1,2151,3082,  78, 958, 517,1564,1108,2020,1411,2338,1679,2662,   0,   0,   0,   0,   0,   0,   0,   0,
+27.11.24,15:28:40,A1,NIO,2,0,0,0, ,VE1,2202,3033,  61, 927, 462,1534,1039,1949,1352,2262,1621,2589,   0,   0,   0,   0,   0,   0,   0,   0,
+27.11.24,15:31:34,A1,NIO,3,0,0,0, ,VE1,2290,3068,  63, 592, 522,1517,1193,2043,1524,2365,1800,2687,   0,   0,   0,   0,   0,   0,   0,   0,
+27.11.24,15:34:01,A1,NIO,4,0,0,0, ,VE1,2406,2907, 208, 436, 641,1359,1301,1867,1639,2192,1915,2520,   0,   0,   0,   0,   0,   0,   0,   0,
+27.11.24,15:35:05,A1,NIO,5,0,0,0, ,VE1,2337,2832, 212, 792, 615,1373,1196,1790,1509,2098,1780,2428,   0,   0,   0,   0,   0,   0,   0,   0,
