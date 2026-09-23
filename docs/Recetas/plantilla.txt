@@ -1,6 +1,6 @@
-#Codigo;0049810086 //nombre del archivo (cambiar esto también)
+#Codigo;{0049810086} //Cambiar código de sellado, a su vez es el nombre del archivo
 #Operacion;19
-#Descripcion;824903021361 //cambiar código de amortiguador
+#Descripcion;{824903021361} //cambiar código de amortiguador
 
 * #Maquina;<idMaquinas>;<default>;<GPH>;<TEP>;<MUL>;<DIV>
 #Maquina;1200009;True;;19.40;1;1

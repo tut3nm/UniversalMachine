@@ -30,9 +30,9 @@ def resource_path(rel: str) -> str:
 
 def app_base_dir() -> str:
     """Carpeta escribible: junto al .exe (empaquetado) o raíz de backend/ en
-    desarrollo. Copia de máquina232/src/paths.py — acá vive un nivel más
+    desarrollo. Copia de la versión del escritorio — acá vive un nivel más
     hondo (app/core/), y por ahora es un `datos/`/`profiles/` PROPIOS de
-    backend/, independiente de máquina232/. Unificar el almacenamiento con
+    backend/, independiente del escritorio. Unificar el almacenamiento con
     la app Tkinter (para que ambas lean/escriban el mismo `datos/<id>/`) es
     una decisión de corte a producción, no algo para asumir en Fase 1."""
     if getattr(sys, "frozen", False):

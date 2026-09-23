@@ -10,7 +10,7 @@ export interface ItemMenu {
 
 /**
  * Botón que despliega un menú debajo, como el "📤 Exportar ▾" del
- * escritorio (`_show_export_menu`, máquina232/src/app.py:4050).
+ * escritorio (`_show_export_menu`).
  */
 export default function MenuDesplegable({
   etiqueta,

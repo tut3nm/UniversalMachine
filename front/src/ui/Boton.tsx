@@ -3,7 +3,7 @@ import Tooltip from "./Tooltip";
 
 /**
  * Botón estandarizado de la app — mismo repertorio que `button()` del
- * escritorio (máquina232/src/app.py:139):
+ * escritorio:
  *
  *   primary        acción principal
  *   danger         acción destructiva

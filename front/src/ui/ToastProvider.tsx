@@ -13,7 +13,7 @@ interface Aviso {
 /**
  * Notificaciones breves en la esquina, para confirmar que una acción se
  * completó sin interrumpir al operario con un diálogo modal. Equivale a
- * `toast()` en máquina232/src/app.py:255.
+ * `toast()` del escritorio.
  */
 export default function ToastProvider({ children }: { children: ReactNode }) {
   const [avisos, setAvisos] = useState<Aviso[]>([]);

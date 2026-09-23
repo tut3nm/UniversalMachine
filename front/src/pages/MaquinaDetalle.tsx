@@ -1,21 +1,29 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   api,
   esNumerico,
   FILTROS_VACIOS,
   type Campo,
   type DetalleMaquina,
+  type EstadoDeshacer,
   type FiltrosTabla,
   type InfoApp,
   type Registro,
   type RespuestaSalud,
 } from "../api";
 import TablaRegistros, { type Edicion, type Orden } from "../components/TablaRegistros";
+import BackupsDialog from "../dialogs/BackupsDialog";
 import BulkEditDialog from "../dialogs/BulkEditDialog";
+import DiffsDialog from "../dialogs/DiffsDialog";
+import DuplicadosDialog from "../dialogs/DuplicadosDialog";
 import FiltrosDialog from "../dialogs/FiltrosDialog";
+import HistorialDialog from "../dialogs/HistorialDialog";
+import ImportarDialog from "../dialogs/ImportarDialog";
 import RegistroDialog from "../dialogs/RegistroDialog";
 import SaludDialog from "../dialogs/SaludDialog";
+import SelectorMaquinasDialog from "../dialogs/SelectorMaquinasDialog";
+import WizardMaquinaDialog from "../dialogs/WizardMaquinaDialog";
 import { useAtajos } from "../hooks/useAtajos";
 import { claveDeFiltros, useCatalogo } from "../hooks/useCatalogo";
 import {
@@ -29,9 +37,6 @@ import {
 } from "../ui";
 import { parsearValorCampo } from "../validacion";
 
-/** Se muestra en el tooltip de lo que todavía no está portado a la web. */
-const PENDIENTE = " — todavía no disponible en la versión web";
-
 /** Espera antes de mandar la búsqueda al servidor, para no pedir una
  *  consulta por cada tecla mientras el operario escribe un código. */
 const ESPERA_BUSQUEDA_MS = 250;
@@ -44,7 +49,7 @@ interface Estado {
 /**
  * Pantalla principal de una máquina: header, toolbar, tabla y barra de
  * estado, con la misma distribución que la ventana del escritorio
- * (máquina232/src/app.py:3366, `App._build_ui`).
+ * (`App._build_ui`).
  */
 export default function MaquinaDetalle() {
   const { id } = useParams<{ id: string }>();
@@ -58,6 +63,7 @@ export default function MaquinaDetalle() {
 
 function VistaMaquina({ id }: { id: string }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const toast = useToast();
   const { confirmar, avisar } = useDialogos();
 
@@ -82,6 +88,24 @@ function VistaMaquina({ id }: { id: string }) {
   const [dialogoBulkEdit, setDialogoBulkEdit] = useState(false);
   const [dialogoFiltros, setDialogoFiltros] = useState(false);
   const [dialogoSalud, setDialogoSalud] = useState<RespuestaSalud | null>(null);
+  // Enlace profundo desde /maquinas/:id/backups o /historial (ver
+  // pages/Backups.tsx y pages/Historial.tsx): abren el modal correspondiente
+  // sobre esta misma pantalla en vez de una ruta separada, como pide 6.2 del
+  // plan de paridad.
+  const abrirDesdeEnlace = (location.state as { abrir?: string } | null)?.abrir;
+  const [dialogoBackups, setDialogoBackups] = useState(abrirDesdeEnlace === "backups");
+  const [dialogoHistorial, setDialogoHistorial] = useState(abrirDesdeEnlace === "historial");
+  const [dialogoDiffs, setDialogoDiffs] = useState(false);
+  const [dialogoDuplicados, setDialogoDuplicados] = useState(false);
+  const [dialogoImportar, setDialogoImportar] = useState(false);
+  const [dialogoSelectorMaquinas, setDialogoSelectorMaquinas] = useState(false);
+  const [dialogoWizard, setDialogoWizard] = useState(false);
+  const [undo, setUndo] = useState<EstadoDeshacer>({
+    puede_deshacer: false,
+    puede_rehacer: false,
+    descripcion_deshacer: null,
+    descripcion_rehacer: null,
+  });
 
   const [estado, setEstado] = useState<Estado>({ mensaje: "", tono: "normal" });
   const buscadorRef = useRef<HTMLInputElement>(null);
@@ -122,6 +146,7 @@ function VistaMaquina({ id }: { id: string }) {
       .listarMaquinas()
       .then((ms) => vivo && setCantidadMaquinas(ms.length))
       .catch(() => {});
+    api.estadoDeshacer(id).then((u) => vivo && setUndo(u)).catch(() => {});
     return () => {
       vivo = false;
     };
@@ -218,10 +243,15 @@ function VistaMaquina({ id }: { id: string }) {
   };
 
   // -- acciones -------------------------------------------------------------
+  const actualizarUndo = () => {
+    api.estadoDeshacer(id).then(setUndo).catch(() => {});
+  };
+
   const trasGuardar = (mensaje: string) => {
     decir("Cambios guardados");
     toast.mostrar(mensaje);
     catalogo.recargar();
+    actualizarUndo();
   };
 
   const reportarFallo = async (e: unknown, titulo: string) => {
@@ -300,6 +330,7 @@ function VistaMaquina({ id }: { id: string }) {
       );
       decir("Cambios guardados");
       catalogo.recargar();
+      actualizarUndo();
     } catch (e) {
       await reportarFallo(e, "No se pudo guardar el cambio");
     }
@@ -343,9 +374,9 @@ function VistaMaquina({ id }: { id: string }) {
     }
   };
 
-  /** Busca el código en la tabla, igual que `ir_a_registro` del escritorio
-   *  (máquina232/src/app.py:3640): limpia los filtros que lo puedan estar
-   *  ocultando y lo deja como resultado único de la búsqueda. Los hallazgos
+  /** Busca el código en la tabla, igual que `ir_a_registro` del escritorio:
+   *  limpia los filtros que lo puedan estar ocultando y lo deja como
+   *  resultado único de la búsqueda. Los hallazgos
    *  de salud son siempre sobre registros reales, así que no hace falta
    *  activar el toggle de slots vacíos. */
   const irARegistroDesdeSalud = (code: string) => {
@@ -389,6 +420,7 @@ function VistaMaquina({ id }: { id: string }) {
       decir("Cambios guardados");
       toast.mostrar(`${r.eliminados} registro(s) eliminado(s).`, "aviso");
       catalogo.recargar();
+      actualizarUndo();
     } catch (e) {
       await reportarFallo(e, "No se pudieron eliminar los registros");
       catalogo.recargar();
@@ -425,6 +457,39 @@ function VistaMaquina({ id }: { id: string }) {
     await borrarIndices(indices);
   };
 
+  // -- backups, historial, diferencias y archivos ----------------------------
+  const onBackupRestaurado = (hash: string) => {
+    catalogo.setHash(hash);
+    decir("Cambios guardados");
+    catalogo.recargar();
+    actualizarUndo();
+  };
+
+  const onRestaurarOriginal = async () => {
+    const ok = await confirmar({
+      titulo: "Restaurar el archivo original",
+      mensaje:
+        "Esto descarta TODOS los cambios hechos desde que se cargó la máquina " +
+        "por primera vez y vuelve al archivo original. Se guarda un backup " +
+        "del estado actual antes de hacerlo.",
+      peligro: true,
+      textoOk: "Restaurar",
+      textoCancelar: "Cancelar",
+    });
+    if (!ok) return;
+    try {
+      const r = await api.restaurarOriginal(id);
+      onBackupRestaurado(r.hash);
+      toast.mostrar("Archivo original restaurado.", "aviso");
+    } catch (e) {
+      await avisar({ titulo: "No se pudo restaurar el original", mensaje: String(e), tipo: "error" });
+    }
+  };
+
+  const onExportar = (cual: "actual" | "original") => {
+    window.open(api.exportarUrl(id, cual), "_blank");
+  };
+
   const onAcercaDe = () =>
     avisar({
       titulo: "Acerca de",
@@ -439,13 +504,48 @@ function VistaMaquina({ id }: { id: string }) {
       ].join("\n"),
     });
 
+  // -- deshacer / rehacer (B3) ------------------------------------------------
+  const onDeshacer = async () => {
+    if (modoBorrado || !undo.puede_deshacer) {
+      decir("Nada para deshacer");
+      return;
+    }
+    try {
+      const r = await api.deshacer(id);
+      catalogo.setHash(r.hash);
+      catalogo.recargar();
+      setUndo(r);
+      toast.mostrar(`Deshecho: ${r.descripcion}`, "aviso");
+    } catch (e) {
+      await avisar({ titulo: "No se pudo deshacer", mensaje: String(e), tipo: "error" });
+      actualizarUndo();
+    }
+  };
+
+  const onRehacer = async () => {
+    if (modoBorrado || !undo.puede_rehacer) {
+      decir("Nada para rehacer");
+      return;
+    }
+    try {
+      const r = await api.rehacer(id);
+      catalogo.setHash(r.hash);
+      catalogo.recargar();
+      setUndo(r);
+      toast.mostrar(`Rehecho: ${r.descripcion}`, "aviso");
+    } catch (e) {
+      await avisar({ titulo: "No se pudo rehacer", mensaje: String(e), tipo: "error" });
+      actualizarUndo();
+    }
+  };
+
   // -- atajos ---------------------------------------------------------------
   useAtajos(
     {
       "ctrl+n": onNuevo,
       "ctrl+f": () => buscadorRef.current?.focus(),
-      "ctrl+z": () => decir("Nada para deshacer"),
-      "ctrl+y": () => decir("Nada para rehacer"),
+      "ctrl+z": () => void onDeshacer(),
+      "ctrl+y": () => void onRehacer(),
       Delete: () => void onEliminarInmediato(),
       Enter: () => void onEditar(),
       Escape: () => modoBorrado && salirModoBorrado(),
@@ -501,7 +601,7 @@ function VistaMaquina({ id }: { id: string }) {
           <Boton
             tipo="light"
             chico
-            onClick={() => navigate("/")}
+            onClick={() => setDialogoSelectorMaquinas(true)}
             tooltip="Ver y elegir entre los documentos de configuración de todas las máquinas"
           >
             🗂 Máquinas
@@ -578,12 +678,27 @@ function VistaMaquina({ id }: { id: string }) {
           <Boton
             tipo="ghost"
             chico
-            disabled
-            tooltip={"Deshacer el último cambio (Ctrl+Z)" + PENDIENTE}
+            onClick={() => void onDeshacer()}
+            disabled={modoBorrado || !undo.puede_deshacer}
+            tooltip={
+              undo.descripcion_deshacer
+                ? `Deshacer: ${undo.descripcion_deshacer} (Ctrl+Z)`
+                : "Deshacer el último cambio (Ctrl+Z)"
+            }
           >
             ↶
           </Boton>
-          <Boton tipo="ghost" chico disabled tooltip={"Rehacer (Ctrl+Y)" + PENDIENTE}>
+          <Boton
+            tipo="ghost"
+            chico
+            onClick={() => void onRehacer()}
+            disabled={modoBorrado || !undo.puede_rehacer}
+            tooltip={
+              undo.descripcion_rehacer
+                ? `Rehacer: ${undo.descripcion_rehacer} (Ctrl+Y)`
+                : "Rehacer (Ctrl+Y)"
+            }
+          >
             ↷
           </Boton>
 
@@ -592,11 +707,9 @@ function VistaMaquina({ id }: { id: string }) {
               <Separador />
               <Boton
                 tipo="secondary"
-                disabled
-                tooltip={
-                  "Revisar códigos parecidos y decidir cuáles son duplicados reales" +
-                  PENDIENTE
-                }
+                onClick={() => setDialogoDuplicados(true)}
+                disabled={modoBorrado}
+                tooltip="Revisar códigos parecidos y decidir cuáles son duplicados reales"
               >
                 ⧉ Duplicados
               </Boton>
@@ -607,10 +720,9 @@ function VistaMaquina({ id }: { id: string }) {
 
           <Boton
             tipo="secondary"
-            disabled
-            tooltip={
-              "Comparar contra un Excel y aplicar solo los cambios que elijas" + PENDIENTE
-            }
+            onClick={() => setDialogoImportar(true)}
+            disabled={modoBorrado}
+            tooltip="Comparar contra un Excel y aplicar solo los cambios que elijas"
           >
             📥 Importar
           </Boton>
@@ -627,16 +739,15 @@ function VistaMaquina({ id }: { id: string }) {
           </Boton>
           <Boton
             tipo="outline"
-            disabled
-            tooltip={
-              "Comparar el archivo actual contra el original, campo por campo" + PENDIENTE
-            }
+            onClick={() => setDialogoDiffs(true)}
+            disabled={modoBorrado}
+            tooltip="Comparar el archivo actual contra el original, campo por campo"
           >
             🔍 Ver cambios
           </Boton>
           <Boton
             tipo="outline"
-            onClick={() => navigate(`/maquinas/${id}/historial`)}
+            onClick={() => setDialogoHistorial(true)}
             disabled={modoBorrado}
             tooltip="Ver qué cambió, cuándo y quién lo hizo"
           >
@@ -644,7 +755,7 @@ function VistaMaquina({ id }: { id: string }) {
           </Boton>
           <Boton
             tipo="outline"
-            onClick={() => navigate(`/maquinas/${id}/backups`)}
+            onClick={() => setDialogoBackups(true)}
             disabled={modoBorrado}
             tooltip="Ver puntos de respaldo automáticos y restaurar uno en particular"
           >
@@ -652,18 +763,19 @@ function VistaMaquina({ id }: { id: string }) {
           </Boton>
           <Boton
             tipo="outline-danger"
-            disabled
-            tooltip={"Descartar todos los cambios y volver al archivo original" + PENDIENTE}
+            onClick={() => void onRestaurarOriginal()}
+            disabled={modoBorrado}
+            tooltip="Descartar todos los cambios y volver al archivo original"
           >
             ⟲ Restaurar
           </Boton>
           <MenuDesplegable
             etiqueta="📤 Exportar ▾"
-            disabled
-            tooltip={"Guardar una copia del archivo en cualquier carpeta de la PC" + PENDIENTE}
+            disabled={modoBorrado}
+            tooltip="Guardar una copia del archivo en cualquier carpeta de la PC"
             items={[
-              { etiqueta: "Exportar archivo actual (con cambios)…", onSelect: () => {} },
-              { etiqueta: "Exportar archivo original (sin cambios)…", onSelect: () => {} },
+              { etiqueta: "Exportar archivo actual (con cambios)…", onSelect: () => onExportar("actual") },
+              { etiqueta: "Exportar archivo original (sin cambios)…", onSelect: () => onExportar("original") },
             ]}
           />
         </div>
@@ -772,6 +884,76 @@ function VistaMaquina({ id }: { id: string }) {
           onAplicar={aplicarFiltrosRangos}
           onAplicarPreset={aplicarPreset}
           onCerrar={() => setDialogoFiltros(false)}
+        />
+      )}
+
+      {dialogoBackups && (
+        <BackupsDialog
+          machineId={id}
+          onRestaurado={onBackupRestaurado}
+          onCerrar={() => setDialogoBackups(false)}
+        />
+      )}
+
+      {dialogoHistorial && (
+        <HistorialDialog
+          machineId={id}
+          onAbrirBackups={() => {
+            setDialogoHistorial(false);
+            setDialogoBackups(true);
+          }}
+          onCerrar={() => setDialogoHistorial(false)}
+        />
+      )}
+
+      {dialogoDiffs && (
+        <DiffsDialog machineId={id} campos={campos} onCerrar={() => setDialogoDiffs(false)} />
+      )}
+
+      {dialogoDuplicados && (
+        <DuplicadosDialog
+          machineId={id}
+          parametros={parametros}
+          onEliminados={onBackupRestaurado}
+          onCerrar={() => setDialogoDuplicados(false)}
+        />
+      )}
+
+      {dialogoImportar && (
+        <ImportarDialog
+          machineId={id}
+          campos={campos}
+          hashEsperado={catalogo.hash}
+          onAplicado={(hash) => {
+            onBackupRestaurado(hash);
+            toast.mostrar("Importación aplicada.", "aviso");
+          }}
+          onCerrar={() => setDialogoImportar(false)}
+        />
+      )}
+
+      {dialogoSelectorMaquinas && (
+        <SelectorMaquinasDialog
+          currentId={id}
+          onElegir={(otroId) => {
+            setDialogoSelectorMaquinas(false);
+            if (otroId !== id) navigate(`/maquinas/${otroId}`);
+          }}
+          onAgregarMaquina={() => {
+            setDialogoSelectorMaquinas(false);
+            setDialogoWizard(true);
+          }}
+          onCerrar={() => setDialogoSelectorMaquinas(false)}
+        />
+      )}
+
+      {dialogoWizard && (
+        <WizardMaquinaDialog
+          onCreada={(nuevaId) => {
+            setDialogoWizard(false);
+            navigate(`/maquinas/${nuevaId}`);
+          }}
+          onCerrar={() => setDialogoWizard(false)}
         />
       )}
     </div>

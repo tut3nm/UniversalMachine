@@ -2,7 +2,7 @@
  * Barra de estado inferior: a la izquierda el último mensaje de la app
  * ("Cambios guardados", "⚠ Cambios SIN guardar…"), a la derecha el contador
  * de registros y la versión, que abre "Acerca de". Copia la franja de
- * `_build_ui` (máquina232/src/app.py:3547).
+ * `_build_ui` del escritorio.
  */
 export type TonoEstado = "normal" | "aviso" | "error";
 

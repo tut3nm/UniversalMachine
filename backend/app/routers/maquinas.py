@@ -36,6 +36,20 @@ def obtener(machine_id: str):
         raise HTTPException(404, f"No existe la máquina '{machine_id}'")
 
 
+class EliminarMaquinaIn(BaseModel):
+    confirmacion_nombre: str
+
+
+@router.delete("/{machine_id}")
+def eliminar(machine_id: str, body: EliminarMaquinaIn):
+    try:
+        return svc.eliminar_maquina(machine_id, body.confirmacion_nombre)
+    except svc.MaquinaNoEncontrada:
+        raise HTTPException(404, f"No existe la máquina '{machine_id}'")
+    except svc.ConfirmacionInvalida as e:
+        raise HTTPException(422, str(e))
+
+
 @router.get("/{machine_id}/registros")
 def registros(
     machine_id: str,
@@ -135,7 +149,7 @@ class BulkEditIn(BaseModel):
 @router.post("/{machine_id}/registros/bulk-edit")
 def bulk_edit(machine_id: str, body: BulkEditIn):
     """Aplica el mismo valor a un parámetro de varios registros a la vez —
-    equivalente de `BulkEditDialog` (máquina232/src/app.py:2673)."""
+    equivalente de `BulkEditDialog` del escritorio."""
     try:
         return svc.editar_en_masa(
             machine_id, body.indices, body.campo, body.valor, body.hash_esperado)
@@ -157,7 +171,7 @@ class BulkDeleteIn(BaseModel):
 @router.post("/{machine_id}/registros/bulk-delete")
 def bulk_delete(machine_id: str, body: BulkDeleteIn):
     """Baja de varios registros en una sola operación — equivalente de
-    `_delete_indices` (máquina232/src/app.py:3806)."""
+    `_delete_indices` del escritorio."""
     try:
         return svc.eliminar_en_masa(machine_id, body.indices, body.hash_esperado)
     except svc.MaquinaNoEncontrada:

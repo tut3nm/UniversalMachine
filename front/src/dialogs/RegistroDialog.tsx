@@ -5,7 +5,7 @@ import { parsearValorCampo, valorPorDefecto } from "../validacion";
 
 /**
  * Alta y edición de un registro, con un campo por campo visible del perfil.
- * Copia `RecordDialog` del escritorio (máquina232/src/app.py:1287): etiqueta
+ * Copia `RecordDialog` del escritorio: etiqueta
  * en negrita arriba, ayuda a la derecha, spinbox cuando el campo es entero
  * con mínimo y máximo, y las mismas validaciones antes de aceptar.
  */

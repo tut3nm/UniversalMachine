@@ -5,9 +5,9 @@ import { parsearValorCampo } from "../validacion";
 
 /**
  * Aplica el mismo valor a un parámetro de todos los registros seleccionados
- * de una vez. Copia `BulkEditDialog` del escritorio
- * (máquina232/src/app.py:2673): combo de campo, valor nuevo, confirmación
- * antes de aplicar y el botón etiquetado con la cantidad.
+ * de una vez. Copia `BulkEditDialog` del escritorio: combo de campo, valor
+ * nuevo, confirmación antes de aplicar y el botón etiquetado con la
+ * cantidad.
  */
 export default function BulkEditDialog({
   campos,

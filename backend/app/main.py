@@ -15,9 +15,16 @@ import log_config
 import paths
 import version
 
+from app.ai import llm
+from app.routers import asistente as asistente_router
 from app.routers import consulta as consulta_router
+from app.routers import duplicados as duplicados_router
+from app.routers import editor_recetas as editor_recetas_router
+from app.routers import importacion as importacion_router
 from app.routers import maquinas as maquinas_router
 from app.routers import mediciones as mediciones_router
+from app.routers import plantillas_masivas as plantillas_masivas_router
+from app.routers import recetas_por_area as recetas_por_area_router
 from app.routers import wizard as wizard_router
 
 def _front_dist() -> str:
@@ -43,9 +50,17 @@ async def lifespan(app: FastAPI):
     except instancia.InstanciaBloqueadaError as e:
         raise RuntimeError(
             f"Ya hay otra instancia de la webapp corriendo en esta PC: {e}") from e
+    # El server de IA es best-effort: si no hay runtime/modelo disponibles
+    # (ej. entorno de tests) el asistente queda deshabilitado, pero el resto
+    # de la webapp funciona igual. El labeler de mediciones no depende de
+    # esto: usa run_llm() por subprocess directamente.
+    resultado_ia = llm.start_llama_server()
+    if not resultado_ia.ok:
+        log_config.get_logger().warning("IA local (server) no disponible: %s", resultado_ia.error)
     try:
         yield
     finally:
+        llm.stop_llama_server()
         instancia.liberar(paths.app_base_dir())
 
 
@@ -60,10 +75,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(asistente_router.router)
+app.include_router(editor_recetas_router.router)
 app.include_router(maquinas_router.router)
 app.include_router(consulta_router.router)
+app.include_router(duplicados_router.router)
+app.include_router(importacion_router.router)
 app.include_router(wizard_router.router)
 app.include_router(mediciones_router.router)
+app.include_router(plantillas_masivas_router.router)
+app.include_router(recetas_por_area_router.router)
 
 
 @app.get("/api/health")
@@ -74,7 +95,7 @@ def health():
 @app.get("/api/info")
 def info():
     """Datos del "Acerca de" y de la barra de estado: los mismos que muestra
-    `App.on_about` en el escritorio (máquina232/src/app.py:3998)."""
+    `App.on_about` en el escritorio."""
     return {
         "titulo": "Configurador de Parámetros de Planta",
         "version": version.APP_VERSION,

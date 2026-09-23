@@ -44,9 +44,9 @@ interface Props {
  * reserva el alto del resto con dos filas espaciadoras, para que el scroll
  * y la barra sigan representando el catálogo entero.
  *
- * De cara al operario se comporta igual que el Treeview del escritorio
- * (máquina232/src/app.py:3506): una sola lista continua, sin paginado,
- * ordenable por encabezado, con edición de una celda al doble clic.
+ * De cara al operario se comporta igual que el Treeview del escritorio:
+ * una sola lista continua, sin paginado, ordenable por encabezado, con
+ * edición de una celda al doble clic.
  */
 export default function TablaRegistros({
   campos,
@@ -278,7 +278,7 @@ function FilaRegistro({
 
 /** Input que reemplaza a la celda mientras se edita: Enter guarda, Escape
  *  cancela y perder el foco guarda, igual que `_editar_celda` del
- *  escritorio (máquina232/src/app.py:3710). */
+ *  escritorio. */
 function EditorCelda({
   valorInicial,
   onGuardar,

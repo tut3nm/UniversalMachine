@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api, type ResumenMaquina } from "../api";
 import Header from "../components/Header";
+import WizardMaquinaDialog from "../dialogs/WizardMaquinaDialog";
+import { Boton } from "../ui";
 
 function badgeSalud(alertas: number | null) {
   if (alertas === null) return null;
@@ -10,8 +12,10 @@ function badgeSalud(alertas: number | null) {
 }
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [maquinas, setMaquinas] = useState<ResumenMaquina[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [dialogoWizard, setDialogoWizard] = useState(false);
 
   useEffect(() => {
     api.listarMaquinas().then(setMaquinas).catch((e) => setError(String(e)));
@@ -20,8 +24,15 @@ export default function Dashboard() {
   return (
     <div className="pagina">
       <Header />
-      <h1>Máquinas</h1>
-      <p className="muted">Elegí una máquina para ver y editar sus recetas.</p>
+      <div className="pagina__titulo-acciones">
+        <div>
+          <h1>Máquinas</h1>
+          <p className="muted">Elegí una máquina para ver y editar sus recetas.</p>
+        </div>
+        <Boton tipo="primary" onClick={() => setDialogoWizard(true)}>
+          ➕ Nueva máquina
+        </Boton>
+      </div>
 
       {error && <p className="error">Error: {error}</p>}
       {!error && !maquinas && <p>Cargando…</p>}
@@ -61,6 +72,16 @@ export default function Dashboard() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {dialogoWizard && (
+        <WizardMaquinaDialog
+          onCreada={(id) => {
+            setDialogoWizard(false);
+            navigate(`/maquinas/${id}`);
+          }}
+          onCerrar={() => setDialogoWizard(false)}
+        />
       )}
     </div>
   );

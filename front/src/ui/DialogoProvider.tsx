@@ -14,7 +14,7 @@ type Pendiente =
 /**
  * Diálogos de confirmación y de aviso, con las etiquetas fijas en español
  * (Sí/No), igual que `confirm()`, `info()`, `warn()` y `error()` del
- * escritorio (máquina232/src/app.py:225-253). Se exponen como promesas para
+ * escritorio. Se exponen como promesas para
  * poder escribirlos en línea dentro de un handler `async`.
  */
 export default function DialogoProvider({ children }: { children: ReactNode }) {

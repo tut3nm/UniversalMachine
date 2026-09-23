@@ -2,8 +2,8 @@ import { esNumerico, type Campo } from "./api";
 
 /**
  * Parseo y validación de un valor de campo antes de mandarlo al backend.
- * Es el equivalente de `validacion.parsear_valor_campo` del escritorio
- * (máquina232/src/validacion.py:47): el backend vuelve a validar siempre —
+ * Es el equivalente de `validacion.parsear_valor_campo` del escritorio: el
+ * backend vuelve a validar siempre —
  * esto es para poder avisar en el acto, sin ida y vuelta, igual que la
  * edición en línea de una celda en la app vieja.
  */

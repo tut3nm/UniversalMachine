@@ -16,8 +16,8 @@ function rangosIniciales(campos: Campo[], crudos: string[]): Record<string, Extr
 
 /**
  * Filtros de rango numérico por campo, más presets de "búsqueda + rangos"
- * guardados por máquina. Copia `FiltrosDialog` del escritorio
- * (máquina232/src/app.py:2521): una fila por campo numérico, Limpiar
+ * guardados por máquina. Copia `FiltrosDialog` del escritorio: una fila
+ * por campo numérico, Limpiar
  * (aplica y deja el diálogo abierto), Guardar como… y Aplicar (aplica y
  * cierra), y la lista de presets con Aplicar/Eliminar cada uno.
  */

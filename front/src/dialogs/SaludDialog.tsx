@@ -10,8 +10,8 @@ const TIPO_HALLAZGO_LABEL: Record<string, string> = {
 /**
  * Todos los problemas del catálogo en una sola lista: valores fuera de
  * rango, campos obligatorios vacíos y duplicados sin revisar, más cuántos
- * slots vacíos quedan libres. Copia `SaludDialog` del escritorio
- * (máquina232/src/app.py:2434), con "Ir al registro" reemplazado por poner
+ * slots vacíos quedan libres. Copia `SaludDialog` del escritorio, con
+ * "Ir al registro" reemplazado por poner
  * su código en la búsqueda de la tabla (acá no hay una fila física a la
  * que hacer scroll: la tabla es virtualizada y pide del servidor).
  */

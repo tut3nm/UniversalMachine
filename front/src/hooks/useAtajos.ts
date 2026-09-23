@@ -15,7 +15,7 @@ function normalizar(e: KeyboardEvent): string {
 
 /**
  * Atajos de teclado de la ventana principal, los mismos que registra
- * `App.__init__` en el escritorio (máquina232/src/app.py:2901):
+ * `App.__init__` en el escritorio:
  *
  *   Ctrl+N nuevo · Ctrl+F buscar · Ctrl+Z deshacer · Ctrl+Y rehacer
  *   Delete eliminar · Enter editar · Escape cancelar

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, type ResultadoMediciones } from "../api";
+import AsistentePanel from "../components/AsistentePanel";
 import Header from "../components/Header";
 
 export default function Mediciones() {
@@ -52,6 +53,7 @@ export default function Mediciones() {
 
   return (
     <div className="pagina">
+      <AsistentePanel pantallaActual="/mediciones" />
       <Header />
       <p className="breadcrumbs">
         <Link to="/">Máquinas</Link>

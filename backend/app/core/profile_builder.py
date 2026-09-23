@@ -96,20 +96,50 @@ def classify_row(grid: list[list[str]], row_idx: int, primera_col: int) -> str:
 
 
 def suggest_clave_row(grid: list[list[str]], primera_col: int) -> int | None:
-    """Primera fila con valores no numéricos y todos distintos entre sí:
-    heurística simple para sugerir cuál es el código/clave de cada pieza."""
+    """Primera fila con valores todos distintos entre sí: heurística simple
+    para sugerir cuál es el código/clave de cada pieza. Se prefiere una fila
+    de TEXTO (más probable que sea un código real y no una medición), pero si
+    ninguna fila de texto califica se acepta la primera fila puramente
+    numérica con valores únicos como respaldo (p. ej. un código de pieza que
+    resulta ser numérico, como RNROAMORTIGUADOR=4717012798): es mejor
+    sugerir ese candidato, aunque sea numérico, que no sugerir nada y dejar
+    que la UI caiga por defecto a la fila 0 (que casi nunca es la clave).
+
+    Si NINGUNA fila tiene valores 100% únicos (exports reales a veces
+    repiten un código en variantes distintas del mismo modelo), se ofrece
+    como último recurso la fila con más valores casi-únicos (mayor
+    proporción de distintos/total, con más valores en total como
+    desempate) en vez de no sugerir nada."""
+    candidato_numerico: int | None = None
+    mejor_aprox: tuple[float, int, int] | None = None  # (proporción, r, total)
     for r, row in enumerate(grid):
         valores = [c.strip() for c in row[primera_col:] if c.strip() != ""]
         if len(valores) < 2:
             continue
-        if len(set(valores)) != len(valores):
+
+        distintos = len(set(valores))
+        if distintos != len(valores):
+            proporcion = distintos / len(valores)
+            candidato = (proporcion, r, len(valores))
+            if mejor_aprox is None or candidato[0] > mejor_aprox[0]:
+                mejor_aprox = candidato
             continue  # tiene repetidos: no puede ser clave única
+
         try:
-            [float(v) for v in valores]
-            continue  # es puramente numérica: probablemente no es el código
+            nums = [float(v) for v in valores]
         except ValueError:
-            return r
-    return None
+            return r  # candidato de texto, 100% único: se prefiere siempre
+        else:
+            # una secuencia consecutiva (1, 2, 3, ...) es un índice
+            # autogenerado, no un código real: no calificar como candidato.
+            if all(b - a == 1 for a, b in zip(nums, nums[1:])):
+                continue
+            if candidato_numerico is None:
+                candidato_numerico = r
+
+    if candidato_numerico is not None:
+        return candidato_numerico
+    return mejor_aprox[1] if mejor_aprox is not None else None
 
 
 # ---------------------------------------------------------------------------

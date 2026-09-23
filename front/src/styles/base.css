@@ -84,6 +84,13 @@ pre,
   padding: 0 1.5rem 3rem;
 }
 
+.pagina__titulo-acciones {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
 .app-header {
   display: flex;
   align-items: center;

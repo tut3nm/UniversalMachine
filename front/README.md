@@ -1,11 +1,9 @@
 # front
 
-Frontend del nuevo sistema web (React + TypeScript + Vite) que unifica
-`máquina232` (Configurador de Planta) y `Diagramadora` (Conversor de
-Mediciones). Ver [`PLAN_WEBAPP.md`](../PLAN_WEBAPP.md) en la raíz para la
-arquitectura completa. `máquina232/` y `Diagramadora/` (las apps de
-escritorio existentes) no dependen de esta carpeta y siguen usándose tal
-cual mientras se construye esto.
+Frontend del sistema web (React + TypeScript + Vite) que reemplaza las apps
+de escritorio `máquina232` (Configurador de Planta) y `Diagramadora`
+(Conversor de Mediciones), ya migradas. Ver [`PLAN_WEBAPP.md`](../PLAN_WEBAPP.md)
+en la raíz para la arquitectura completa.
 
 ## Desarrollo
 

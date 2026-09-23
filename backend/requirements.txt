@@ -5,8 +5,8 @@ uvicorn[standard]
 pywebview
 python-multipart
 
-# openpyxl hace falta para excel_import.py (importación desde Excel,
-# reutilizado de máquina232/src/ — ver wizard/importación en PLAN_WEBAPP.md).
+# openpyxl hace falta para excel_import.py (importación desde Excel) y para
+# csv_recipe.py (editor de recetas tipo matriz, ver PLAN_EDITOR_RECETAS_MATRIZ.md).
 openpyxl>=3.1
 
 # pyinstaller se usa SOLO para generar el ejecutable empaquetado.

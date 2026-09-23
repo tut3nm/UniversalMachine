@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import dataclasses
 import os
+import shutil
 from typing import Any
 
 from app import _bootstrap  # noqa: F401  (side effect: agrega app/core/ a sys.path)
@@ -52,8 +53,7 @@ class ValoresInvalidos(Exception):
 
 class ClaveDuplicada(Exception):
     """Ya existe un registro con esa clave — el mismo chequeo que hace
-    `RecordDialog._on_ok` en el escritorio (máquina232/src/app.py:1377)
-    antes de aceptar un alta o edición."""
+    `RecordDialog._on_ok` en el escritorio antes de aceptar un alta o edición."""
 
     def __init__(self, titulo_ui: str, valor: str, posicion: int):
         self.titulo_ui = titulo_ui
@@ -61,6 +61,13 @@ class ClaveDuplicada(Exception):
         self.posicion = posicion
         super().__init__(
             f"Ya existe un registro con {titulo_ui} «{valor}» (posición {posicion}).")
+
+
+class ConfirmacionInvalida(Exception):
+    """El texto tipeado para confirmar el borrado de una máquina no
+    coincide con su nombre — la web exige tipear el nombre completo, a
+    diferencia del `confirm()` genérico del escritorio (decisión tomada
+    con el usuario, PLAN_PARIDAD_UI.md, tabla de decisiones)."""
 
 
 def _perfil_path(machine_id: str) -> str:
@@ -202,9 +209,9 @@ def parsear_rangos(profile: Profile, crudos: list[str] | None) -> dict[str, tupl
 
 def _filas_visibles(profile: Profile, store: DataStore, q: str,
                     rangos: dict[str, tuple], placeholders: bool) -> list[tuple[int, dict]]:
-    """Mismo criterio que `App._visible_rows` del escritorio
-    (máquina232/src/app.py:3564): oculta slots vacíos salvo que se pidan,
-    aplica la búsqueda libre y después los rangos numéricos."""
+    """Mismo criterio que `App._visible_rows` del escritorio: oculta slots
+    vacíos salvo que se pidan, aplica la búsqueda libre y después los
+    rangos numéricos."""
     campos_visibles = profile.campos_visibles()
     tiene_ph = profile.placeholder_regex() is not None
     query = (q or "").strip().lower()
@@ -309,22 +316,163 @@ _ACCION_HISTORIAL = {"alta": "alta", "edicion": "modificacion", "baja": "baja"}
 @dataclasses.dataclass
 class CambioRegistro:
     """Un cambio puntual sobre UN registro — el equivalente de
-    `CambioRegistro` en el escritorio (máquina232/src/app.py:69), sin la
-    pila de deshacer (todavía no portada, ver PLAN_PARIDAD_UI.md 5.3)."""
+    `CambioRegistro` en el escritorio."""
     accion: str  # "alta" | "edicion" | "baja"
     clave: str
     antes: dict | None = None
     despues: dict | None = None
 
 
+# -- Deshacer / rehacer (B3 de PLAN_PARIDAD_UI.md, sección 5.3) ----------------
+#
+# Mismo modelo que el escritorio: una pila de
+# deshacer y una de rehacer POR MÁQUINA, en memoria del proceso — no hay
+# TTL, viven mientras el backend esté arriba. `ComandoDeshacer` agrupa los
+# `CambioRegistro` de una sola acción del usuario (una importación entera
+# se deshace de una sola vez, aunque haya tocado 40 registros).
+LIMITE_DESHACER = 50
+
+
+@dataclasses.dataclass
+class ComandoDeshacer:
+    descripcion: str
+    cambios: list[CambioRegistro]
+
+
+_PILAS_DESHACER: dict[str, list[ComandoDeshacer]] = {}
+_PILAS_REHACER: dict[str, list[ComandoDeshacer]] = {}
+
+
+class SinNadaQueDeshacer(Exception):
+    pass
+
+
+class SinNadaQueRehacer(Exception):
+    pass
+
+
+def _empujar_deshacer(machine_id: str, descripcion: str, cambios: list[CambioRegistro]) -> None:
+    pila = _PILAS_DESHACER.setdefault(machine_id, [])
+    pila.append(ComandoDeshacer(descripcion, cambios))
+    if len(pila) > LIMITE_DESHACER:
+        pila.pop(0)
+    _PILAS_REHACER[machine_id] = []  # cualquier cambio nuevo vacía el rehacer
+
+
+def limpiar_pilas_deshacer(machine_id: str) -> None:
+    """Se llama al restaurar un backup, restaurar el original, o eliminar
+    la máquina: el estado del store cambió de raíz y ya no hay comandos
+    aplicables (igual que app.py:3836, que deshabilita ambos botones tras
+    una restauración)."""
+    _PILAS_DESHACER.pop(machine_id, None)
+    _PILAS_REHACER.pop(machine_id, None)
+
+
+def estado_deshacer(machine_id: str) -> dict[str, Any]:
+    d = _PILAS_DESHACER.get(machine_id) or []
+    r = _PILAS_REHACER.get(machine_id) or []
+    return {
+        "puede_deshacer": bool(d),
+        "puede_rehacer": bool(r),
+        "descripcion_deshacer": d[-1].descripcion if d else None,
+        "descripcion_rehacer": r[-1].descripcion if r else None,
+    }
+
+
+def _mutar_store_para_deshacer(store: DataStore, clave_campo: str,
+                               cambios_originales: list[CambioRegistro]) -> list[CambioRegistro]:
+    """Aplica el inverso de `cambios_originales` sobre `store`, en orden
+    inverso (importante si varios cambios tocan registros relacionados) —
+    equivalente de `_aplicar_inverso` del escritorio (app.py:3067). Devuelve
+    los `CambioRegistro` YA INVERTIDOS, listos para pasarle a
+    `_guardar_con_backup` (persiste y registra el historial en un solo
+    paso, con el sentido correcto: deshacer una alta es una baja, etc.)."""
+    invertidos = []
+    for c in reversed(cambios_originales):
+        if c.accion == "alta":
+            idx = store.find_key(c.clave)
+            if idx != -1:
+                store.delete(idx)
+            invertidos.append(CambioRegistro("baja", c.clave, c.despues, None))
+        elif c.accion == "baja":
+            store.add(dict(c.antes))
+            invertidos.append(CambioRegistro("alta", c.clave, None, c.antes))
+        else:  # edicion
+            idx = store.find_key(c.despues[clave_campo])
+            if idx != -1:
+                store.update(idx, dict(c.antes))
+            invertidos.append(CambioRegistro("edicion", c.clave, c.despues, c.antes))
+    return invertidos
+
+
+def _mutar_store_para_rehacer(store: DataStore, clave_campo: str,
+                              cambios_originales: list[CambioRegistro]) -> list[CambioRegistro]:
+    """Vuelve a aplicar `cambios_originales` en el orden original —
+    equivalente de `_aplicar_directo` del escritorio (app.py:3084)."""
+    aplicados = []
+    for c in cambios_originales:
+        if c.accion == "alta":
+            store.add(dict(c.despues))
+            aplicados.append(CambioRegistro("alta", c.clave, None, c.despues))
+        elif c.accion == "baja":
+            idx = store.find_key(c.clave)
+            if idx != -1:
+                store.delete(idx)
+            aplicados.append(CambioRegistro("baja", c.clave, c.antes, None))
+        else:  # edicion
+            idx = store.find_key(c.antes[clave_campo])
+            if idx != -1:
+                store.update(idx, dict(c.despues))
+            aplicados.append(CambioRegistro("edicion", c.clave, c.antes, c.despues))
+    return aplicados
+
+
+def deshacer(machine_id: str) -> dict[str, Any]:
+    pila = _PILAS_DESHACER.get(machine_id) or []
+    if not pila:
+        raise SinNadaQueDeshacer("Nada para deshacer")
+    comando = pila[-1]
+    profile = cargar_perfil(machine_id)
+    store = _cargar_store(profile)
+    clave_campo = profile.campo_clave().nombre_interno
+    eventos = _mutar_store_para_deshacer(store, clave_campo, comando.cambios)
+    nuevo_hash = _guardar_con_backup(profile, store, eventos, None, origen="deshacer")
+    pila.pop()
+    _PILAS_REHACER.setdefault(machine_id, []).append(comando)
+    return {"hash": nuevo_hash, "descripcion": comando.descripcion, **estado_deshacer(machine_id)}
+
+
+def rehacer(machine_id: str) -> dict[str, Any]:
+    pila = _PILAS_REHACER.get(machine_id) or []
+    if not pila:
+        raise SinNadaQueRehacer("Nada para rehacer")
+    comando = pila[-1]
+    profile = cargar_perfil(machine_id)
+    store = _cargar_store(profile)
+    clave_campo = profile.campo_clave().nombre_interno
+    eventos = _mutar_store_para_rehacer(store, clave_campo, comando.cambios)
+    nuevo_hash = _guardar_con_backup(profile, store, eventos, None, origen="rehacer")
+    pila.pop()
+    _PILAS_DESHACER.setdefault(machine_id, []).append(comando)
+    return {"hash": nuevo_hash, "descripcion": comando.descripcion, **estado_deshacer(machine_id)}
+
+
 def _guardar_con_backup(profile: Profile, store: DataStore,
                          cambios: list[CambioRegistro],
-                         hash_esperado: str | None) -> str:
+                         hash_esperado: str | None, origen: str = "webapp",
+                         descripcion: str | None = None) -> str:
     """Un solo backup y un solo guardado para TODOS los cambios de la
     operación (una edición en masa de 40 registros no crea 40 backups), pero
     un evento de historial POR REGISTRO — igual que `_registrar_cambios` en
-    el escritorio (máquina232/src/app.py:3051): cada alta/edición/baja queda
-    trazada individualmente aunque el usuario la haya disparado de una."""
+    el escritorio: cada alta/edición/baja queda trazada individualmente
+    aunque el usuario la haya disparado de una.
+
+    `origen` distingue en el historial si el cambio vino de la edición
+    manual, una importación, etc. (historial.py: "origen (manual, un
+    archivo Excel importado, una restauración, etc.)"). `descripcion`, si
+    viene, apila `cambios` como un comando deshacible con Ctrl+Z — se omite
+    cuando el propio deshacer/rehacer es quien está guardando, para no
+    crear un comando de deshacer al deshacer."""
     actual, _, _ = _rutas(profile)
     if hash_esperado is not None and os.path.exists(actual):
         if deteccion_externa.fue_modificado_externamente(actual, hash_esperado):
@@ -337,8 +485,10 @@ def _guardar_con_backup(profile: Profile, store: DataStore,
     for c in cambios:
         historial_mod.registrar(
             path_historial, accion=_ACCION_HISTORIAL[c.accion], clave=c.clave,
-            anteriores=c.antes, nuevos=c.despues, origen="webapp", version=APP_VERSION,
+            anteriores=c.antes, nuevos=c.despues, origen=origen, version=APP_VERSION,
         )
+    if descripcion is not None:
+        _empujar_deshacer(profile.id, descripcion, cambios)
     return deteccion_externa.hash_archivo(actual)
 
 
@@ -362,7 +512,7 @@ def crear_registro(machine_id: str, valores: dict[str, Any],
     idx = len(store.records) - 1
     nuevo_hash = _guardar_con_backup(
         profile, store, [CambioRegistro("alta", store.key_of(nuevo), None, nuevo)],
-        hash_esperado)
+        hash_esperado, descripcion=f"Agregar «{store.key_of(nuevo)}»")
     return {"index": idx, "registro": nuevo, "hash": nuevo_hash}
 
 
@@ -383,7 +533,7 @@ def actualizar_registro(machine_id: str, index: int, valores: dict[str, Any],
     despues = dict(store.records[index])
     nuevo_hash = _guardar_con_backup(
         profile, store, [CambioRegistro("edicion", store.key_of(despues), antes, despues)],
-        hash_esperado)
+        hash_esperado, descripcion=f"Editar «{store.key_of(despues)}»")
     return {"index": index, "registro": despues, "hash": nuevo_hash}
 
 
@@ -397,7 +547,7 @@ def eliminar_registro(machine_id: str, index: int,
     store.delete(index)
     nuevo_hash = _guardar_con_backup(
         profile, store, [CambioRegistro("baja", store.key_of(antes), antes, None)],
-        hash_esperado)
+        hash_esperado, descripcion=f"Eliminar «{store.key_of(antes)}»")
     return {"hash": nuevo_hash}
 
 
@@ -405,7 +555,7 @@ def editar_en_masa(machine_id: str, indices: list[int], campo_nombre: str, texto
                     hash_esperado: str | None = None) -> dict[str, Any]:
     """Aplica el mismo valor a un campo de varios registros de una sola vez,
     con la misma validación que la edición individual — el equivalente de
-    `BulkEditDialog` (máquina232/src/app.py:2673). Se guarda como una sola
+    `BulkEditDialog` del escritorio. Se guarda como una sola
     operación (un backup) pero cada registro queda trazado por separado en
     el historial."""
     profile = cargar_perfil(machine_id)
@@ -430,7 +580,8 @@ def editar_en_masa(machine_id: str, indices: list[int], campo_nombre: str, texto
         despues = dict(store.records[i])
         cambios.append(CambioRegistro("edicion", store.key_of(despues), antes, despues))
 
-    nuevo_hash = _guardar_con_backup(profile, store, cambios, hash_esperado)
+    nuevo_hash = _guardar_con_backup(profile, store, cambios, hash_esperado,
+                                     descripcion=f"Editar en masa ({len(cambios)})")
     return {"modificados": len(cambios), "hash": nuevo_hash}
 
 
@@ -438,7 +589,7 @@ def eliminar_en_masa(machine_id: str, indices: list[int],
                      hash_esperado: str | None = None) -> dict[str, Any]:
     """Baja de varios registros como una sola operación (un backup), con un
     evento de historial por registro — el equivalente de `_delete_indices`
-    en el escritorio (máquina232/src/app.py:3806)."""
+    en el escritorio."""
     profile = cargar_perfil(machine_id)
     store = _cargar_store(profile)
     # De mayor a menor índice: borrar corre una posición hacia atrás a los
@@ -454,7 +605,8 @@ def eliminar_en_masa(machine_id: str, indices: list[int],
         store.delete(i)
         cambios.append(CambioRegistro("baja", store.key_of(antes), antes, None))
 
-    nuevo_hash = _guardar_con_backup(profile, store, cambios, hash_esperado)
+    nuevo_hash = _guardar_con_backup(profile, store, cambios, hash_esperado,
+                                     descripcion=f"Eliminar en masa ({len(cambios)})")
     return {"eliminados": len(cambios), "hash": nuevo_hash}
 
 
@@ -492,3 +644,26 @@ def eliminar_filtro(machine_id: str, nombre: str) -> list[dict[str, Any]]:
     profile = cargar_perfil(machine_id)
     data_dir = paths.data_dir_for(profile.id)
     return filtros_mod.eliminar(data_dir, nombre)
+
+
+def eliminar_maquina(machine_id: str, confirmacion_nombre: str) -> dict[str, Any]:
+    """Borra permanentemente el perfil y la carpeta de datos de una
+    máquina — equivalente de `DeleteMachineDialog._delete_profile_and_data`
+    del escritorio, con la confirmación por tipeo del nombre exigida
+    server-side (nunca confiar solo en que el frontend ya la pidió)."""
+    profile = cargar_perfil(machine_id)
+    if confirmacion_nombre.strip() != profile.nombre:
+        raise ConfirmacionInvalida(
+            f"El nombre no coincide. Escribí exactamente «{profile.nombre}» para confirmar.")
+
+    perfil_path = _perfil_path(machine_id)
+    if os.path.exists(perfil_path):
+        os.remove(perfil_path)
+    data_dir = paths.data_dir_for(profile.id)
+    actual = os.path.join(data_dir, f"actual.{profile.extension}")
+    if os.path.isdir(data_dir):
+        shutil.rmtree(data_dir)
+
+    _CACHE_LECTURA.pop(actual, None)
+    limpiar_pilas_deshacer(machine_id)
+    return {"eliminada": True}
