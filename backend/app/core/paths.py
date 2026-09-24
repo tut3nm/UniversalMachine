@@ -62,3 +62,15 @@ def data_dir_for(profile_id: str) -> str:
     d = os.path.join(app_base_dir(), "datos", str(profile_id))
     os.makedirs(d, exist_ok=True)
     return d
+
+
+def docs_dir(rel: str) -> str:
+    """Carpeta de referencia versionada en docs/ del repo (plantillas de
+    recetas por area, etc.): solo lectura, se bundlea con --add-data (ver
+    build.bat) para que el .exe la encuentre en _MEIPASS/docs/<rel>; en
+    desarrollo se lee directo de docs/ en la raiz del repo."""
+    base = getattr(sys, "_MEIPASS", None)
+    if base:
+        return os.path.join(base, "docs", rel)
+    here = os.path.dirname(os.path.abspath(__file__))
+    return os.path.abspath(os.path.join(here, "..", "..", "..", "docs", rel))

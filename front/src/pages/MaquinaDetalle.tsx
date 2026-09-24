@@ -588,16 +588,18 @@ function VistaMaquina({ id }: { id: string }) {
           <span className="mq__descripcion">{detalle.descripcion}</span>
         )}
         <div className="mq__header-acciones">
-          {cantidadMaquinas >= 3 && (
-            <Boton
-              tipo="light"
-              chico
-              onClick={() => navigate("/")}
-              tooltip="Vista consolidada de todas las máquinas: última modificación, registros, duplicados y alertas de salud"
-            >
-              📊 Panel
-            </Boton>
-          )}
+          <Boton
+            tipo="light"
+            chico
+            onClick={() => navigate("/")}
+            tooltip={
+              cantidadMaquinas >= 3
+                ? "Vista consolidada de todas las máquinas: última modificación, registros, duplicados y alertas de salud"
+                : "Volver al panel de máquinas"
+            }
+          >
+            {cantidadMaquinas >= 3 ? "📊 Panel" : "← Volver"}
+          </Boton>
           <Boton
             tipo="light"
             chico

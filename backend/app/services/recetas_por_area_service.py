@@ -11,6 +11,7 @@ import io
 import zipfile
 from pathlib import Path
 
+from app import _bootstrap  # noqa: F401  (side effect: agrega app/core/ a sys.path)
 from app.ai import validacion_recetas
 from app.ai.plantillas_masivas import _normalizar, leer_listado
 from app.ai.recetas_por_area import (
@@ -21,6 +22,8 @@ from app.ai.recetas_por_area import (
     generar_por_area,
 )
 
+import paths
+
 _AREAS = {"HD": "RecetasHD", "GPS1": "RecetasGPS1", "GPS2": "RecetasGPS2"}
 _CARPETA_POR_AREA_NORM = {_normalizar(area): carpeta for area, carpeta in _AREAS.items()}
 
@@ -29,12 +32,8 @@ class RecetasPorAreaError(ValueError):
     """Error de validacion de negocio (listado invalido o catalogo incompleto)."""
 
 
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[3]
-
-
 def _cargar_catalogos() -> dict[str, CatalogoArea]:
-    base = _repo_root() / "docs" / "Recetas"
+    base = Path(paths.docs_dir("Recetas"))
     try:
         return {
             _normalizar(area): cargar_catalogo(base / carpeta, area)
@@ -75,7 +74,7 @@ def _hallazgos_listado(encabezados: list[str], filas: list[dict]) -> list[valida
 def _hallazgos_catalogo(areas_usadas: dict[str, int]) -> list[validacion_recetas.Hallazgo]:
     """Solo audita las areas que este listado realmente usa: si HD tiene un
     defecto conocido pero el listado es todo GPS1, no tiene sentido avisar."""
-    base = _repo_root() / "docs" / "Recetas"
+    base = Path(paths.docs_dir("Recetas"))
     hallazgos: list[validacion_recetas.Hallazgo] = []
     for area in areas_usadas:
         carpeta = _CARPETA_POR_AREA_NORM.get(_normalizar(area))
@@ -112,7 +111,7 @@ def auditar_repositorio() -> dict:
     """Audita las plantillas de referencia de las 3 areas tal cual estan hoy
     en docs/Recetas/, sin depender de que el usuario suba nada (boton
     'Auditar recetas existentes', PLAN_ASISTENTE_IA.md seccion 5)."""
-    base = _repo_root() / "docs" / "Recetas"
+    base = Path(paths.docs_dir("Recetas"))
     hallazgos: list[validacion_recetas.Hallazgo] = []
     for area, carpeta in _AREAS.items():
         try:

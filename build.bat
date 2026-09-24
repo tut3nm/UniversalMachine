@@ -51,11 +51,14 @@ pushd "backend"
   --onedir --windowed ^
   --name "ConfiguradorPlantaWeb" ^
   --paths "." ^
+  --paths "app\core" ^
+  --paths "app\ai" ^
   --collect-submodules uvicorn ^
   --collect-submodules webview ^
-  --add-data "app\recetas232.csv;." ^
-  --add-data "profiles;profiles" ^
-  --add-data "..\front\dist;front_dist" ^
+  --add-data "%~dp0backend\app\recetas232.csv;." ^
+  --add-data "%~dp0backend\profiles;profiles" ^
+  --add-data "%~dp0front\dist;front_dist" ^
+  --add-data "%~dp0docs\Recetas;docs\Recetas" ^
   --distpath "..\dist" ^
   --workpath "build\work" ^
   --specpath "build" ^
@@ -71,6 +74,20 @@ if not "%BUILD_ERR%"=="0" (
 )
 
 echo.
+echo === Copiando el motor de IA local (runtime\: llama.cpp + modelo .gguf) ===
+if not exist "backend\runtime\llama" (
+  echo [AVISO] No se encontro backend\runtime\llama - el ejecutable quedara
+  echo         sin IA local ^(el asistente va a avisar que no esta disponible^).
+) else (
+  robocopy "backend\runtime" "dist\ConfiguradorPlantaWeb\runtime" /E /NFL /NDL /NJH /NJS
+  if errorlevel 8 (
+    echo [ERROR] Fallo al copiar runtime\.
+    pause
+    exit /b 1
+  )
+)
+
+echo.
 echo ============================================================================
 echo  LISTO. Ejecutable generado en:
 echo     dist\ConfiguradorPlantaWeb\ConfiguradorPlantaWeb.exe
@@ -80,6 +97,8 @@ echo  a cualquier PC con Windows y hace doble clic en el .exe.
 echo  Al iniciar creara, junto al .exe:
 echo     - profiles\        (perfiles de maquina; se pueden agregar mas)
 echo     - datos\^<id^>\       (original + actual + meta.json por maquina)
+echo     - datos\memoria\   (formatos aprendidos por el asistente)
+echo  El motor de IA local va empaquetado en runtime\ (no requiere internet).
 echo ============================================================================
 pause
 endlocal

@@ -47,6 +47,8 @@ from app.ai.plantillas_masivas import _normalizar, leer_listado
 from app.ai.recetas_por_area import cargar_catalogo
 from app.services import plantillas_masivas_service
 
+import paths
+
 _AREAS = {"HD": "RecetasHD", "GPS1": "RecetasGPS1", "GPS2": "RecetasGPS2"}
 
 ARCHIVOS_POR_PANTALLA: dict[str, tuple[str, ...]] = {
@@ -77,10 +79,6 @@ class Salida:
     nombre: str
     media_type: str
     resumen: dict
-
-
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[3]
 
 
 def _validar_pantalla(pantalla: str) -> None:
@@ -116,7 +114,7 @@ def _programa_desde_json(data) -> Programa:
 
 
 def _cargar_catalogos() -> dict[str, CatalogoArea]:
-    base = _repo_root() / "docs" / "Recetas"
+    base = Path(paths.docs_dir("Recetas"))
     try:
         return {
             _normalizar(area): cargar_catalogo(base / carpeta, area)
@@ -152,7 +150,9 @@ def _vista_previa_recetas(programa: Programa, ctx: ContextoRecetas) -> dict:
     for area in {a.area for a in vista_previa.archivos}:
         carpeta = _AREAS.get(area)
         if carpeta is not None:
-            hallazgos.extend(validacion_recetas.auditar_carpeta(_repo_root() / "docs" / "Recetas" / carpeta))
+            hallazgos.extend(
+                validacion_recetas.auditar_carpeta(Path(paths.docs_dir("Recetas")) / carpeta)
+            )
     return {
         "cantidad_archivos": len(vista_previa.archivos),
         "advertencias": vista_previa.advertencias,
