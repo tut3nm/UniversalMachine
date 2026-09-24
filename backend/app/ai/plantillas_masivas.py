@@ -162,6 +162,8 @@ class ResultadoGeneracion:
     archivos: list[RegistroGenerado] = field(default_factory=list)
     lineas_ignoradas: list[int] = field(default_factory=list)   # indices de linea sin match
     columnas_sin_uso: list[str] = field(default_factory=list)
+    campos: list[CampoVariable] = field(default_factory=list)    # con la columna ya resuelta
+    columna_nombre_archivo: str = ""
 
 
 def _resolver_columna(campo: CampoVariable, encabezados_norm: dict[str, str]) -> str | None:
@@ -180,12 +182,31 @@ def _resolver_columna(campo: CampoVariable, encabezados_norm: dict[str, str]) ->
     return encontradas[0]
 
 
-def generar(plantilla: PlantillaParseada, encabezados: list[str], filas: list[dict]) -> ResultadoGeneracion:
+def generar(
+    plantilla: PlantillaParseada,
+    encabezados: list[str],
+    filas: list[dict],
+    asignaciones: dict[int, str] | None = None,
+    columna_nombre_archivo: str | None = None,
+) -> ResultadoGeneracion:
+    """`asignaciones` (indice de linea 0-based -> columna) y
+    `columna_nombre_archivo` pisan lo que el motor deduce de los comentarios
+    '// ...' de la plantilla: son las indicaciones que el usuario le da al
+    asistente (PLAN_ASISTENTE_IA.md, seccion 12.2)."""
+    asignaciones = asignaciones or {}
+    for columna in list(asignaciones.values()) + [columna_nombre_archivo]:
+        if columna is not None and columna not in encabezados:
+            raise ValueError(f"El listado no tiene la columna '{columna}'.")
+    lineas_con_campo = {c.linea_index for c in plantilla.campos}
+    for linea_index in asignaciones:
+        if linea_index not in lineas_con_campo:
+            raise ValueError(f"La linea {linea_index + 1} de la plantilla no tiene ningun campo {{...}}.")
+
     encabezados_norm = {h: _normalizar(h) for h in encabezados}
 
     campos_resueltos: list[CampoVariable] = []
     for campo in plantilla.campos:
-        columna = _resolver_columna(campo, encabezados_norm)
+        columna = asignaciones.get(campo.linea_index) or _resolver_columna(campo, encabezados_norm)
         es_nombre_archivo = columna is not None and _FRASE_NOMBRE_ARCHIVO in _normalizar(campo.comentario)
         campos_resueltos.append(
             CampoVariable(
@@ -197,16 +218,19 @@ def generar(plantilla: PlantillaParseada, encabezados: list[str], filas: list[di
             )
         )
 
-    campos_nombre_archivo = [c for c in campos_resueltos if c.es_nombre_archivo]
-    if len(campos_nombre_archivo) != 1:
-        raise ValueError(
-            "La plantilla debe tener exactamente un campo {...} cuyo comentario diga "
-            f"'{_FRASE_NOMBRE_ARCHIVO}' (encontrados: {len(campos_nombre_archivo)})."
-        )
-    campo_nombre_archivo = campos_nombre_archivo[0]
+    if columna_nombre_archivo is None:
+        campos_nombre_archivo = [c for c in campos_resueltos if c.es_nombre_archivo]
+        if len(campos_nombre_archivo) != 1:
+            raise ValueError(
+                "La plantilla debe tener exactamente un campo {...} cuyo comentario diga "
+                f"'{_FRASE_NOMBRE_ARCHIVO}' (encontrados: {len(campos_nombre_archivo)}), "
+                "o hay que indicar de que columna sale el nombre del archivo."
+            )
+        columna_nombre_archivo = campos_nombre_archivo[0].columna_listado
 
     lineas_ignoradas = sorted(c.linea_index for c in campos_resueltos if c.columna_listado is None)
     columnas_usadas = {c.columna_listado for c in campos_resueltos if c.columna_listado is not None}
+    columnas_usadas.add(columna_nombre_archivo)
     columnas_sin_uso = [h for h in encabezados if h not in columnas_usadas]
 
     lineas_base = list(plantilla.lineas)
@@ -220,7 +244,12 @@ def generar(plantilla: PlantillaParseada, encabezados: list[str], filas: list[di
 
     campos_variables = [c for c in campos_resueltos if c.columna_listado is not None]
 
-    resultado = ResultadoGeneracion(lineas_ignoradas=lineas_ignoradas, columnas_sin_uso=columnas_sin_uso)
+    resultado = ResultadoGeneracion(
+        lineas_ignoradas=lineas_ignoradas,
+        columnas_sin_uso=columnas_sin_uso,
+        campos=campos_resueltos,
+        columna_nombre_archivo=columna_nombre_archivo,
+    )
     nombres_usados: dict[str, int] = {}
 
     for i, fila in enumerate(filas, start=1):
@@ -231,7 +260,7 @@ def generar(plantilla: PlantillaParseada, encabezados: list[str], filas: list[di
                 "{" + campo.valor_original + "}", valor
             )
 
-        base_nombre = fila.get(campo_nombre_archivo.columna_listado, "").strip()
+        base_nombre = fila.get(columna_nombre_archivo, "").strip()
         if not base_nombre:
             raise ValueError(f"La fila {i} del listado no tiene valor para el nombre de archivo.")
 

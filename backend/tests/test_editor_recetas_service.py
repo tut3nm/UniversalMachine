@@ -122,3 +122,50 @@ def test_aplicar_y_descargar_con_alerta_no_deja_rastro_en_el_log(tmp_path, monke
         svc.aplicar_y_descargar(csv_bytes, "receta.csv", xlsx_editado, "receta (editable).xlsx")
 
     assert log_jsonl.leer_eventos("editor_recetas") == []
+
+
+# -- nombre de archivo "dificil" (comillas, caracteres invalidos en Windows) --
+
+
+@pytest.mark.parametrize("nombre", [
+    'receta "rara".csv',
+    "receta<>:|?*.csv",
+    "CON.csv",
+    "con",
+    '"""',
+])
+def test_exportar_excel_con_nombre_dificil_no_rompe_y_no_lo_altera(nombre):
+    xlsx_bytes, nombre_xlsx, _resumen = svc.exportar_excel(_csv_bytes(), nombre)
+    assert xlsx_bytes[:2] == b"PK"  # xlsx valido (zip)
+    # el nombre devuelto al caller (y de ahi al Content-Disposition) es el
+    # original, sin sanear: solo el path en disco se sanea internamente
+    assert nombre_xlsx == f"{svc._nombre_base(nombre)} (editable).xlsx"
+
+
+def test_aplicar_y_descargar_con_nombre_dificil_no_rompe_y_no_lo_altera():
+    nombre_csv = 'receta "rara".csv'
+    nombre_xlsx = "editado<>.xlsx"
+    xlsx_editado = _xlsx_editado(_csv_bytes(), "Temperatura", "P1", 99)
+
+    csv_bytes, nombre_salida, resumen = svc.aplicar_y_descargar(
+        _csv_bytes(), nombre_csv, xlsx_editado, nombre_xlsx,
+    )
+    assert resumen["cantidad_cambios"] == 1
+    assert nombre_salida == f"{svc._nombre_base(nombre_csv)} (actualizado).csv"
+    assert b"Temperatura,99" in csv_bytes
+
+
+@pytest.mark.parametrize("crudo, esperado", [
+    ("receta.csv", "receta.csv"),
+    ('a "b" c.csv', "a _b_ c.csv"),
+    ("a<b>c:d|e?f*g.csv", "a_b_c_d_e_f_g.csv"),
+    ("  espacios  .csv", "espacios  .csv"),
+    ("sin_extension", "sin_extension"),
+    ("CON", "_CON"),
+    ("con.txt", "_con.txt"),
+    ("COM1", "_COM1"),
+    ("...", "archivo"),
+    ("", "archivo"),
+])
+def test_nombre_seguro_para_disco(crudo, esperado):
+    assert svc._nombre_seguro_para_disco(crudo) == esperado

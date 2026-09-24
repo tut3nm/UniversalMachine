@@ -9,7 +9,13 @@ from __future__ import annotations
 import io
 import zipfile
 
-from app.ai.plantillas_masivas import ResultadoGeneracion, generar, leer_listado, parsear_plantilla
+from app.ai.plantillas_masivas import (
+    PlantillaParseada,
+    ResultadoGeneracion,
+    generar,
+    leer_listado,
+    parsear_plantilla,
+)
 
 _EXTENSIONES_PLANTILLA_SOPORTADAS = ("txt", "csv")
 
@@ -31,10 +37,10 @@ def _extension(nombre_archivo: str) -> str:
     return nombre_archivo.lower().rsplit(".", 1)[-1] if "." in nombre_archivo else ""
 
 
-def _generar_resultado(
+def cargar(
     plantilla_contenido: bytes, plantilla_nombre: str,
     listado_contenido: bytes, listado_nombre: str,
-) -> ResultadoGeneracion:
+) -> tuple[PlantillaParseada, list[str], list[dict]]:
     ext = _extension(plantilla_nombre)
     if ext not in _EXTENSIONES_PLANTILLA_SOPORTADAS:
         raise PlantillasMasivasError(
@@ -55,11 +61,29 @@ def _generar_resultado(
 
     if not filas:
         raise PlantillasMasivasError("El listado no tiene filas de datos.")
+    return plantilla, encabezados, filas
 
+
+def _generar_resultado(
+    plantilla_contenido: bytes, plantilla_nombre: str,
+    listado_contenido: bytes, listado_nombre: str,
+) -> ResultadoGeneracion:
+    plantilla, encabezados, filas = cargar(
+        plantilla_contenido, plantilla_nombre, listado_contenido, listado_nombre
+    )
     try:
         return generar(plantilla, encabezados, filas)
     except ValueError as e:
         raise PlantillasMasivasError(str(e)) from e
+
+
+def armar_zip(resultado: ResultadoGeneracion, plantilla_nombre: str) -> tuple[bytes, str]:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for archivo in resultado.archivos:
+            zf.writestr(archivo.nombre_archivo, archivo.contenido)
+    nombre_base = plantilla_nombre.rsplit(".", 1)[0] if "." in plantilla_nombre else plantilla_nombre
+    return buf.getvalue(), f"{nombre_base}.zip"
 
 
 def previsualizar(
@@ -84,11 +108,4 @@ def generar_zip(
     resultado = _generar_resultado(
         plantilla_contenido, plantilla_nombre, listado_contenido, listado_nombre
     )
-
-    buf = io.BytesIO()
-    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-        for archivo in resultado.archivos:
-            zf.writestr(archivo.nombre_archivo, archivo.contenido)
-
-    nombre_base = plantilla_nombre.rsplit(".", 1)[0] if "." in plantilla_nombre else plantilla_nombre
-    return buf.getvalue(), f"{nombre_base}.zip"
+    return armar_zip(resultado, plantilla_nombre)

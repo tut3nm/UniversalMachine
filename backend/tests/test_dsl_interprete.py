@@ -203,19 +203,38 @@ def test_validar_rechaza_programa_sin_expandir():
         validar_programa(programa, ctx)
 
 
-def test_validar_rechaza_programa_desconocido():
-    catalogos = _catalogos()
-    encabezados, filas = _listado_andon()
-    ctx = construir_contexto(catalogos, encabezados, filas)
-    programa = Programa(operaciones=(Operacion("desconocido", {}),))
-    with pytest.raises(ValueError, match="desconocido"):
-        validar_programa(programa, ctx)
-
-
-def test_validar_rechaza_operacion_gruesa_dentro_del_programa():
+def test_validar_rechaza_operacion_inexistente():
     catalogos = _catalogos()
     encabezados, filas = _listado_andon()
     ctx = construir_contexto(catalogos, encabezados, filas)
     programa = Programa(operaciones=(Operacion("generar_recetas_por_area", {}),))
-    with pytest.raises(ValueError, match="gruesa"):
+    with pytest.raises(ValueError, match="Operacion desconocida"):
+        validar_programa(programa, ctx)
+
+
+def test_validar_rechaza_operacion_de_otra_pantalla():
+    catalogos = _catalogos()
+    encabezados, filas = _listado_andon()
+    ctx = construir_contexto(catalogos, encabezados, filas)
+    programa = Programa(operaciones=(Operacion("definir_tablas", {"tablas": []}),))
+    with pytest.raises(ValueError, match="no es una operacion de recetas"):
+        validar_programa(programa, ctx)
+
+
+@pytest.mark.parametrize("patron, mensaje", [
+    ("HD.*.15.*.17.*", "caracteres invalidos"),
+    ("{sellado}.def.txt", "tiene que incluir {sufijo}"),
+    ("{sufijo}.def.txt", "tiene que incluir una columna"),
+    ("{inventado}.{sufijo}.def.txt", "slot inexistente"),
+    ("", "falta el patron"),
+])
+def test_validar_rechaza_patrones_de_nombre_invalidos(patron, mensaje):
+    # 'HD.*.15.*.17.*' es lo que emitio el modelo real antes de restringir
+    # el patron en la gramatica: 54 archivos con un nombre invalido en Windows.
+    ctx = construir_contexto(_catalogos(), *_listado_andon())
+    programa = Programa(operaciones=(
+        Operacion("expandir_por_catalogo", {}),
+        Operacion("nombrar_archivo", {"patron": patron}),
+    ))
+    with pytest.raises(ValueError, match=mensaje):
         validar_programa(programa, ctx)

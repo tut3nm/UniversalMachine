@@ -139,8 +139,26 @@ export function esNumerico(campo: Campo): boolean {
  *  default si el header no vino o no matchea (nunca debería pasar, pero un
  *  .zip/.xlsx igual sirve sin el nombre "lindo"). */
 function _nombreDesdeContentDisposition(res: Response, porDefecto: string): string {
-  const match = /filename="?([^";]+)"?/.exec(res.headers.get("Content-Disposition") ?? "");
+  const header = res.headers.get("Content-Disposition") ?? "";
+  const utf8 = /filename\*=UTF-8''([^;]+)/i.exec(header);
+  if (utf8) {
+    try {
+      return decodeURIComponent(utf8[1]);
+    } catch {
+      // cae al nombre ASCII de respaldo
+    }
+  }
+  const match = /filename="?([^";]+)"?/.exec(header);
   return match ? match[1] : porDefecto;
+}
+
+function _formAsistente(pantalla: PantallaAsistente, archivos: ArchivosAsistente): FormData {
+  const form = new FormData();
+  form.append("pantalla", pantalla);
+  for (const [clave, archivo] of Object.entries(archivos)) {
+    if (archivo) form.append(clave, archivo);
+  }
+  return form;
 }
 
 /** Resumen JSON informativo mandado en un header custom junto a una
@@ -454,10 +472,13 @@ export const api = {
   // -- asistente embebido (DSL de operaciones) --------------------------------
   estadoAsistente: () =>
     req<EstadoAsistente>("/api/asistente/estado"),
-  interpretarAsistente: async (texto: string, listado: File | null): Promise<RespuestaInterpretar> => {
-    const form = new FormData();
+  interpretarAsistente: async (
+    pantalla: PantallaAsistente,
+    texto: string,
+    archivos: ArchivosAsistente,
+  ): Promise<RespuestaAsistente> => {
+    const form = _formAsistente(pantalla, archivos);
     form.append("texto", texto);
-    if (listado) form.append("listado", listado);
     const res = await fetch(`${BASE}/api/asistente/interpretar`, { method: "POST", body: form });
     if (!res.ok) {
       const detail = await res.json().catch(() => ({ detail: res.statusText }));
@@ -465,27 +486,91 @@ export const api = {
     }
     return res.json();
   },
-  ejecutarAsistente: async (
+  previsualizarAsistente: async (
+    pantalla: PantallaAsistente,
     programa: ProgramaAsistente[],
-    listado: File,
+    archivos: ArchivosAsistente,
+  ): Promise<RespuestaAsistente> => {
+    const form = _formAsistente(pantalla, archivos);
+    form.append("programa", JSON.stringify(programa));
+    const res = await fetch(`${BASE}/api/asistente/previsualizar`, { method: "POST", body: form });
+    if (!res.ok) {
+      const detail = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(detail.detail ?? `Error ${res.status}`);
+    }
+    return res.json();
+  },
+  ejecutarAsistente: async (
+    pantalla: PantallaAsistente,
+    programa: ProgramaAsistente[],
+    archivos: ArchivosAsistente,
     texto: string,
   ): Promise<{ blob: Blob; nombreArchivo: string; resumen: ResumenEjecucionAsistente }> => {
-    const form = new FormData();
+    const form = _formAsistente(pantalla, archivos);
     form.append("programa", JSON.stringify(programa));
-    form.append("listado", listado);
     form.append("texto", texto);
     const res = await fetch(`${BASE}/api/asistente/ejecutar`, { method: "POST", body: form });
     if (!res.ok) {
       const detail = await res.json().catch(() => ({ detail: res.statusText }));
       throw new Error(detail.detail ?? `Error ${res.status}`);
     }
-    const nombreArchivo = _nombreDesdeContentDisposition(res, "asistente.zip");
+    const nombreArchivo = _nombreDesdeContentDisposition(res, "asistente");
     const resumen = _resumenDesdeHeader<ResumenEjecucionAsistente>(res, "X-Asistente-Resumen", {
       cantidad_archivos: 0, advertencias: [],
     });
     const blob = await res.blob();
     return { blob, nombreArchivo, resumen };
   },
+  // -- memoria de formatos (PLAN_MEMORIA_FORMATOS.md, fase 1: solo mediciones) -
+  reconocerAsistente: async (
+    pantalla: PantallaAsistente,
+    archivos: ArchivosAsistente,
+  ): Promise<RespuestaReconocimiento> => {
+    const form = _formAsistente(pantalla, archivos);
+    const res = await fetch(`${BASE}/api/asistente/reconocer`, { method: "POST", body: form });
+    if (!res.ok) {
+      const detail = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(detail.detail ?? `Error ${res.status}`);
+    }
+    return res.json();
+  },
+  guardarFormatoAsistente: async (
+    pantalla: PantallaAsistente,
+    nombre: string,
+    programa: ProgramaAsistente[],
+    explicacion: string,
+    archivos: ArchivosAsistente,
+    formatoId?: string,
+  ): Promise<FormatoResumen> => {
+    const form = _formAsistente(pantalla, archivos);
+    form.append("nombre", nombre);
+    form.append("programa", JSON.stringify(programa));
+    form.append("explicacion", explicacion);
+    if (formatoId) form.append("formato_id", formatoId);
+    const res = await fetch(`${BASE}/api/asistente/formatos`, { method: "POST", body: form });
+    if (!res.ok) {
+      const detail = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(detail.detail ?? `Error ${res.status}`);
+    }
+    return res.json();
+  },
+  listarFormatos: (pantalla?: PantallaAsistente) =>
+    req<FormatoResumen[]>(
+      `/api/asistente/formatos${pantalla ? `?pantalla=${encodeURIComponent(pantalla)}` : ""}`,
+    ),
+  obtenerFormato: (formatoId: string) =>
+    req<FormatoDetalle>(`/api/asistente/formatos/${formatoId}`),
+  renombrarFormato: (formatoId: string, nombre: string) => {
+    const form = new FormData();
+    form.append("nombre", nombre);
+    return req<FormatoResumen>(`/api/asistente/formatos/${formatoId}`, {
+      method: "PATCH",
+      headers: {},
+      body: form,
+    });
+  },
+  borrarFormato: (formatoId: string) =>
+    req<{ ok: boolean }>(`/api/asistente/formatos/${formatoId}`, { method: "DELETE" }),
   // -- editor de recetas tipo matriz (PLAN_EDITOR_RECETAS_MATRIZ.md) ----------
   editorRecetasExportar: async (csv: File): Promise<{ blob: Blob; nombreArchivo: string; resumen: ResumenExportarEditorRecetas }> => {
     const form = new FormData();
@@ -579,16 +664,27 @@ export interface ReporteAuditoriaRecetas {
   hallazgos: HallazgoValidacion[];
 }
 
-export interface ResultadoMediciones {
-  out_filename: string;
-  records: number;
-  fields: number;
-  configs: number;
-  period: number;
-  unparsed: number;
-  ai_messages: string[];
-  download_url: string;
-}
+/** Dos motores segun la forma del archivo: 'tablas' para CSV con varias
+ *  tablas (ej. equipo H1312), 'registros' para los logs de maquina. */
+export type ResultadoMediciones =
+  | {
+      modo: "tablas";
+      out_filename: string;
+      download_url: string;
+      tablas: TablaDetectada[];
+      advertencias: string[];
+    }
+  | {
+      modo: "registros";
+      out_filename: string;
+      download_url: string;
+      records: number;
+      fields: number;
+      configs: number;
+      period: number;
+      unparsed: number;
+      ai_messages: string[];
+    };
 
 export interface BackupInfo {
   nombre: string;
@@ -803,24 +899,91 @@ export interface ProgramaAsistente {
   args: Record<string, unknown>;
 }
 
-export interface RespuestaInterpretar {
+/** Cada pantalla con asistente: la pantalla define la tarea, el asistente
+ *  solo ajusta como se hace sobre sus archivos (PLAN_ASISTENTE_IA.md, 12). */
+export type PantallaAsistente = "recetas_por_area" | "mediciones" | "plantilla";
+
+/** Archivos que la pantalla ya tiene cargados, por el nombre de campo que
+ *  espera el backend. */
+export type ArchivosAsistente = Partial<Record<"listado" | "datos" | "plantilla", File | null>>;
+
+export interface TablaDetectada {
+  titulo: string;
+  desde: number;
+  hasta: number;
+  con_encabezado: boolean;
+  fila_encabezado: number | null;
+  n_filas: number;
+  n_columnas: number;
+  columnas: string[];
+}
+
+export interface CampoPlantilla {
+  linea: number;
+  texto: string;
+  columna: string | null;
+}
+
+export interface RespuestaAsistente {
+  pantalla: PantallaAsistente;
   programa: ProgramaAsistente[];
-  desconocido: boolean;
-  /** Presente cuando `desconocido` es true. */
-  mensaje?: string;
-  /** Descripcion en criollo de la operacion elegida (para mostrar en la card). */
-  descripcion?: string;
-  /** La operacion elegida es de otra pantalla (ej. 'tabular_mediciones' pedido
-   *  desde 'Recetas por área'): el front ofrece ir a esa pantalla en vez de
-   *  intentar ejecutarla aca. */
-  requiere_pantalla?: string;
-  /** La operacion es 'generar_recetas_por_area' pero esta pantalla todavia no
-   *  tiene un listado cargado: hace falta antes de poder armar la vista previa. */
-  requiere_listado?: boolean;
-  cantidad_archivos?: number;
-  advertencias?: string[];
+  /** Faltan archivos de la pantalla: no se llamo a la IA. */
+  faltan_archivos?: string[];
+  /** false: la IA no estaba o no respondio algo interpretable; se muestra
+   *  lo que se hace sin indicaciones. */
+  ia_respondio?: boolean;
+  /** La IA respondio, pero el mensaje no cambia nada respecto de lo que se
+   *  hace sin indicaciones. */
+  sin_indicaciones?: boolean;
   error_validacion?: string;
+  advertencias?: string[];
+  // recetas por area / plantilla
+  cantidad_archivos?: number;
   hallazgos?: HallazgoValidacion[];
+  // plantilla
+  nombres_archivo?: string[];
+  campos?: CampoPlantilla[];
+  columna_nombre_archivo?: string;
+  columnas_sin_uso?: string[];
+  // mediciones
+  total_lineas?: number;
+  separador?: string;
+  tablas?: TablaDetectada[];
+  // solo cuando esta respuesta vino de /asistente/reconocer
+  coincidencia?: "unica" | "varias" | "ninguna";
+  formato?: FormatoResumen;
+}
+
+// -- memoria de formatos (PLAN_MEMORIA_FORMATOS.md) --------------------------
+
+export interface FormatoResumen {
+  id: string;
+  pantalla: PantallaAsistente;
+  nombre: string;
+  usos: number;
+  creado_por: string;
+  creado: string;
+  ultimo_uso: string | null;
+}
+
+export interface CandidatoFormato extends FormatoResumen {
+  similitud: number;
+}
+
+export interface FormatoDetalle extends FormatoResumen {
+  explicacion: string;
+  regla: unknown;
+}
+
+/** Respuesta de /asistente/reconocer. `programa` y el resto de los campos de
+ *  vista previa solo vienen cuando `coincidencia === "unica"` (ahi se puede
+ *  tratar como una RespuestaAsistente mas para reusar PlanCard). */
+export interface RespuestaReconocimiento extends Omit<RespuestaAsistente, "programa"> {
+  coincidencia: "unica" | "varias" | "ninguna";
+  candidatos: CandidatoFormato[];
+  formato?: FormatoResumen;
+  error_formato?: string;
+  programa?: ProgramaAsistente[];
 }
 
 export interface ResumenEjecucionAsistente {

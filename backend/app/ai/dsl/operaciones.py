@@ -1,12 +1,12 @@
 """
 Catalogo declarativo del DSL de operaciones del asistente embebido.
 
-Cada operacion envuelve algo que un motor determinista YA sabe hacer (ver
-PLAN_ASISTENTE_IA.md, seccion 3.1): el modelo de IA solo elige CUAL de estas
-operaciones usar y con que argumentos - nunca un valor que termine escrito
-dentro de un archivo. Los argumentos de tipo "columna", "sufijo" y "campo" se
-validan siempre contra lo que el contexto real tiene (interprete.py); el
-modelo no puede nombrar algo que no exista.
+Cada pantalla con asistente tiene su propio juego de operaciones finas: la
+pantalla ya define la tarea (recetas por area, mediciones, plantilla), el
+asistente solo ajusta COMO se hace sobre los archivos que esa pantalla tiene
+cargados (PLAN_ASISTENTE_IA.md, seccion 12). El modelo elige operaciones y
+argumentos estructurales - nunca un valor que termine escrito dentro de un
+archivo -, y los argumentos se validan siempre contra los archivos reales.
 
 Regla de crecimiento (seccion 3.1 del plan): no se agrega una operacion sin
 un pedido real que la haya requerido.
@@ -19,112 +19,64 @@ from dataclasses import dataclass
 # (ver recetas_por_area.py: VarianteArea.linea_codigo / linea_descripcion).
 CAMPOS_RECETA = ("#Codigo", "#Descripcion")
 
-OPERACION_DESCONOCIDO = "desconocido"
-
-
-@dataclass(frozen=True)
-class ParametroOp:
-    nombre: str
-    tipo: str  # "columna" | "sufijos" | "campo" | "operador" | "texto"
-    requerido: bool = True
+PANTALLA_RECETAS = "recetas_por_area"
+PANTALLA_MEDICIONES = "mediciones"
+PANTALLA_PLANTILLA = "plantilla"
+PANTALLAS = (PANTALLA_RECETAS, PANTALLA_MEDICIONES, PANTALLA_PLANTILLA)
 
 
 @dataclass(frozen=True)
 class DefinicionOperacion:
     nombre: str
-    capa: str  # "gruesa" | "fina"
+    pantallas: tuple[str, ...]
     descripcion: str
-    parametros: tuple[ParametroOp, ...] = ()
 
 
-OPERACIONES_GRUESAS: tuple[DefinicionOperacion, ...] = (
+_OPERACIONES: tuple[DefinicionOperacion, ...] = (
     DefinicionOperacion(
-        nombre="generar_recetas_por_area",
-        capa="gruesa",
-        descripcion=(
-            "Genera las recetas de cada fila del listado segun su area, "
-            "igual que la pantalla 'Recetas por area'."
-        ),
+        "filtrar_filas", (PANTALLA_RECETAS, PANTALLA_PLANTILLA),
+        "Recorta el listado a las filas que cumplen columna == valor.",
     ),
     DefinicionOperacion(
-        nombre="generar_desde_plantilla",
-        capa="gruesa",
-        descripcion=(
-            "Genera un archivo por fila a partir de una plantilla con campos "
-            "{...} marcados, igual que la pantalla 'Generar desde plantilla'."
-        ),
+        "expandir_por_catalogo", (PANTALLA_RECETAS,),
+        "Expande cada fila a un archivo por sufijo del catalogo de su area.",
     ),
     DefinicionOperacion(
-        nombre="tabular_mediciones",
-        capa="gruesa",
-        descripcion=(
-            "Tabula un archivo de mediciones de ensayo a una planilla, igual "
-            "que la pantalla 'Mediciones'."
-        ),
+        "reemplazar_campo", (PANTALLA_RECETAS,),
+        "Cambia que columna del listado alimenta un campo (#Codigo o #Descripcion) de la plantilla.",
+    ),
+    DefinicionOperacion(
+        "nombrar_archivo", (PANTALLA_RECETAS,),
+        'Define el patron de nombre de archivo, ej. "{amortiguador}.{sufijo}.def.txt".',
+    ),
+    DefinicionOperacion(
+        "agrupar_salida_por", (PANTALLA_RECETAS,),
+        "Agrupa los archivos de salida en carpetas del .zip segun una columna.",
+    ),
+    DefinicionOperacion(
+        "quitar_comentarios", (PANTALLA_RECETAS,),
+        "Saca las lineas de nota '//' del resultado.",
+    ),
+    DefinicionOperacion(
+        "definir_tablas", (PANTALLA_MEDICIONES,),
+        "Indica las filas de cada tabla del archivo (desde, hasta, si la primera fila es encabezado).",
+    ),
+    DefinicionOperacion(
+        "usar_separador", (PANTALLA_MEDICIONES,),
+        "Indica el separador de columnas del archivo.",
+    ),
+    DefinicionOperacion(
+        "asignar_columna", (PANTALLA_PLANTILLA,),
+        "Indica que columna del listado llena el campo {...} de una linea de la plantilla.",
+    ),
+    DefinicionOperacion(
+        "nombre_archivo_desde", (PANTALLA_PLANTILLA,),
+        "Indica de que columna del listado sale el nombre de cada archivo.",
     ),
 )
 
-# Operaciones finas: hoy solo el mundo "recetas por area" las soporta (son
-# los pasos internos de generar_por_area(), vueltos componibles). Si otra
-# pantalla necesita las suyas, se agregan cuando aparezca el pedido real.
-OPERACIONES_FINAS: tuple[DefinicionOperacion, ...] = (
-    DefinicionOperacion(
-        nombre="filtrar_filas",
-        capa="fina",
-        descripcion="Recorta el listado a las filas que cumplen columna == valor.",
-        parametros=(
-            ParametroOp("columna", "columna"),
-            ParametroOp("valor", "texto"),
-        ),
-    ),
-    DefinicionOperacion(
-        nombre="expandir_por_catalogo",
-        capa="fina",
-        descripcion="Expande cada fila a un archivo por sufijo del catalogo de su area.",
-        parametros=(
-            ParametroOp("solo_sufijos", "sufijos", requerido=False),
-        ),
-    ),
-    DefinicionOperacion(
-        nombre="reemplazar_campo",
-        capa="fina",
-        descripcion="Cambia que columna del listado alimenta un campo (#Codigo o #Descripcion) de la plantilla.",
-        parametros=(
-            ParametroOp("campo", "campo"),
-            ParametroOp("columna", "columna"),
-        ),
-    ),
-    DefinicionOperacion(
-        nombre="nombrar_archivo",
-        capa="fina",
-        descripcion='Define el patron de nombre de archivo, ej. "{amortiguador}.{sufijo}.def.txt".',
-        parametros=(
-            ParametroOp("patron", "texto"),
-        ),
-    ),
-    DefinicionOperacion(
-        nombre="agrupar_salida_por",
-        capa="fina",
-        descripcion="Agrupa los archivos de salida en carpetas del .zip segun una columna.",
-        parametros=(
-            ParametroOp("columna", "columna"),
-        ),
-    ),
-    DefinicionOperacion(
-        nombre="quitar_comentarios",
-        capa="fina",
-        descripcion="Saca las lineas de nota '//' del resultado.",
-    ),
-)
-
-TODAS: dict[str, DefinicionOperacion] = {
-    op.nombre: op for op in OPERACIONES_GRUESAS + OPERACIONES_FINAS
-}
+TODAS: dict[str, DefinicionOperacion] = {op.nombre: op for op in _OPERACIONES}
 
 
-def nombres_gruesas() -> list[str]:
-    return [op.nombre for op in OPERACIONES_GRUESAS]
-
-
-def nombres_finas() -> list[str]:
-    return [op.nombre for op in OPERACIONES_FINAS]
+def nombres_de(pantalla: str) -> list[str]:
+    return [op.nombre for op in _OPERACIONES if pantalla in op.pantallas]

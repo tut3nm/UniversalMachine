@@ -17,6 +17,9 @@ Planes de diseño e implementación, en la raíz:
   IA local (DSL de operaciones, `llama-server`).
 - [`PLAN_EDITOR_RECETAS_MATRIZ.md`](PLAN_EDITOR_RECETAS_MATRIZ.md) —
   editor de recetas tipo matriz vía Excel.
+- [`PLAN_MEMORIA_FORMATOS.md`](PLAN_MEMORIA_FORMATOS.md) — memoria
+  compartida de formatos: explicar un tipo de archivo una vez y reconocerlo
+  solo después.
 
 Cada subcarpeta (`front/`, `backend/`) es autocontenida (su propio
 `.gitignore`, dependencias y tests).

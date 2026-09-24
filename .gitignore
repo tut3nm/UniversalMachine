@@ -15,3 +15,6 @@ __pycache__/
 # build.bat: salida de PyInstaller (front/dist/ ya lo cubre front/.gitignore)
 /dist/
 /build/
+
+# graphify: grafo de conocimiento generado, no es fuente del proyecto
+/graphify-out/

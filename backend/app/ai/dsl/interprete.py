@@ -15,9 +15,10 @@ o un sufijo inventado lleguen a un archivo (contrato de seguridad, seccion
 """
 from __future__ import annotations
 
+import string
 from dataclasses import dataclass, field
 
-from app.ai.dsl.operaciones import CAMPOS_RECETA, OPERACION_DESCONOCIDO, TODAS
+from app.ai.dsl.operaciones import CAMPOS_RECETA, PANTALLA_RECETAS, TODAS
 from app.ai.plantillas_masivas import _normalizar
 from app.ai.recetas_por_area import (
     CatalogoArea,
@@ -41,10 +42,6 @@ class Operacion:
 @dataclass(frozen=True)
 class Programa:
     operaciones: tuple[Operacion, ...] = ()
-
-    @property
-    def es_desconocido(self) -> bool:
-        return any(o.op == OPERACION_DESCONOCIDO for o in self.operaciones)
 
 
 @dataclass(frozen=True)
@@ -102,11 +99,6 @@ def validar_programa(programa: Programa, ctx: ContextoRecetas) -> None:
     """Levanta ValueError con un mensaje claro si el programa referencia algo
     que el contexto no tiene, o si esta mal formado. Se llama siempre antes
     de ejecutar_programa()."""
-    if programa.es_desconocido:
-        raise ValueError(
-            "El programa quedo marcado 'desconocido': no hay nada para ejecutar "
-            "todavia, hace falta que complete los datos a mano."
-        )
 
     encabezados = set(ctx.encabezados)
     sufijos_validos = _sufijos_disponibles(ctx)
@@ -117,12 +109,8 @@ def validar_programa(programa: Programa, ctx: ContextoRecetas) -> None:
         definicion = TODAS.get(operacion.op)
         if definicion is None:
             raise ValueError(f"Operacion desconocida: '{operacion.op}'.")
-        if definicion.capa != "fina":
-            raise ValueError(
-                f"'{operacion.op}' es una operacion gruesa: el interprete de "
-                "recetas solo ejecuta operaciones finas (filtrar_filas, "
-                "expandir_por_catalogo, etc.)."
-            )
+        if PANTALLA_RECETAS not in definicion.pantallas:
+            raise ValueError(f"'{operacion.op}' no es una operacion de recetas por area.")
 
         if operacion.op == "filtrar_filas":
             col = operacion.args.get("columna")
@@ -145,8 +133,7 @@ def validar_programa(programa: Programa, ctx: ContextoRecetas) -> None:
                 raise ValueError(f"reemplazar_campo: la columna '{col}' no existe en el listado.")
         elif operacion.op == "nombrar_archivo":
             cantidad_nombrar += 1
-            if not operacion.args.get("patron"):
-                raise ValueError("nombrar_archivo: falta el patron.")
+            _validar_patron(operacion.args.get("patron"), ctx)
         elif operacion.op == "agrupar_salida_por":
             col = operacion.args.get("columna")
             if col not in encabezados:
@@ -160,6 +147,37 @@ def validar_programa(programa: Programa, ctx: ContextoRecetas) -> None:
         raise ValueError("El programa no puede tener mas de un 'expandir_por_catalogo'.")
     if cantidad_nombrar > 1:
         raise ValueError("El programa no puede tener mas de un 'nombrar_archivo'.")
+
+
+_CARACTERES_INVALIDOS_NOMBRE = set('<>:"/\\|?*')
+
+
+def slots_de_nombre(ctx: ContextoRecetas) -> list[str]:
+    """Los {slots} que un patron de nombre de archivo puede usar."""
+    return ["sufijo", "area"] + [_clave_slot(h) for h in ctx.encabezados]
+
+
+def _validar_patron(patron, ctx: ContextoRecetas) -> None:
+    """Cada fila se expande en varios sufijos: sin {sufijo} todos los
+    archivos de una fila se llamarian igual. Sin ninguna columna, todas las
+    filas tambien. Y el nombre tiene que poder existir en Windows."""
+    if not isinstance(patron, str) or not patron.strip():
+        raise ValueError("nombrar_archivo: falta el patron.")
+    try:
+        slots = {campo for _, campo, _, _ in string.Formatter().parse(patron) if campo is not None}
+    except ValueError as exc:
+        raise ValueError(f"nombrar_archivo: patron mal formado ({exc}).") from exc
+    literal = "".join(texto for texto, _, _, _ in string.Formatter().parse(patron))
+    invalidos = sorted(set(literal) & _CARACTERES_INVALIDOS_NOMBRE)
+    if invalidos:
+        raise ValueError(f"nombrar_archivo: el patron tiene caracteres invalidos para un nombre de archivo: {' '.join(invalidos)}")
+    desconocidos = sorted(slots - set(slots_de_nombre(ctx)))
+    if desconocidos:
+        raise ValueError(f"nombrar_archivo: el patron usa un slot inexistente: {{{desconocidos[0]}}}.")
+    if "sufijo" not in slots:
+        raise ValueError("nombrar_archivo: el patron tiene que incluir {sufijo} (si no, las variantes de una fila se llamarian igual).")
+    if not slots - {"sufijo", "area"}:
+        raise ValueError("nombrar_archivo: el patron tiene que incluir una columna del listado, ej. {sellado}.")
 
 
 def _cumple_filtro(valor_fila: str, valor_esperado: str) -> bool:

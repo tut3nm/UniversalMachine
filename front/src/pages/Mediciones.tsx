@@ -53,7 +53,7 @@ export default function Mediciones() {
 
   return (
     <div className="pagina">
-      <AsistentePanel pantallaActual="/mediciones" />
+      <AsistentePanel pantalla="mediciones" archivos={{ datos: archivo }} />
       <Header />
       <p className="breadcrumbs">
         <Link to="/">Máquinas</Link>
@@ -125,34 +125,76 @@ export default function Mediciones() {
       {resultado && (
         <div className="card">
           <h2>Listo: {resultado.out_filename}</h2>
-          <table>
-            <tbody>
-              <tr>
-                <td>Registros encontrados</td>
-                <td>
-                  <strong>{resultado.records}</strong>
-                </td>
-              </tr>
-              <tr>
-                <td>Campos por registro</td>
-                <td>{resultado.fields}</td>
-              </tr>
-              <tr>
-                <td>Configuraciones detectadas</td>
-                <td>{resultado.configs}</td>
-              </tr>
-              <tr>
-                <td>Líneas sin reconocer</td>
-                <td>{resultado.unparsed}</td>
-              </tr>
-            </tbody>
-          </table>
-          {resultado.ai_messages.length > 0 && (
-            <ul className="muted">
-              {resultado.ai_messages.map((m, i) => (
-                <li key={i}>{m}</li>
-              ))}
-            </ul>
+          {resultado.modo === "tablas" ? (
+            <>
+              <p className="muted">
+                El archivo tiene {resultado.tablas.length} tabla(s): cada una sale en su propia hoja.
+                Si alguna no quedó bien, indicale al asistente en qué filas está cada tabla.
+              </p>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Hoja</th>
+                    <th>Filas del archivo</th>
+                    <th>Registros</th>
+                    <th>Columnas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {resultado.tablas.map((t) => (
+                    <tr key={`${t.desde}-${t.hasta}`}>
+                      <td>{t.titulo}</td>
+                      <td>
+                        {t.desde}–{t.hasta}
+                      </td>
+                      <td>
+                        <strong>{t.n_filas}</strong>
+                      </td>
+                      <td>{t.n_columnas}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {resultado.advertencias.length > 0 && (
+                <ul className="muted">
+                  {resultado.advertencias.map((m, i) => (
+                    <li key={i}>{m}</li>
+                  ))}
+                </ul>
+              )}
+            </>
+          ) : (
+            <>
+              <table>
+                <tbody>
+                  <tr>
+                    <td>Registros encontrados</td>
+                    <td>
+                      <strong>{resultado.records}</strong>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Campos por registro</td>
+                    <td>{resultado.fields}</td>
+                  </tr>
+                  <tr>
+                    <td>Configuraciones detectadas</td>
+                    <td>{resultado.configs}</td>
+                  </tr>
+                  <tr>
+                    <td>Líneas sin reconocer</td>
+                    <td>{resultado.unparsed}</td>
+                  </tr>
+                </tbody>
+              </table>
+              {resultado.ai_messages.length > 0 && (
+                <ul className="muted">
+                  {resultado.ai_messages.map((m, i) => (
+                    <li key={i}>{m}</li>
+                  ))}
+                </ul>
+              )}
+            </>
           )}
           <div className="toolbar" style={{ marginTop: "1rem" }}>
             <a className="btn" href={resultado.download_url}>

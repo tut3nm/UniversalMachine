@@ -10,7 +10,14 @@ Rules:
 
 ## Estructura
 
-Monorepo: `máquina232/` y `Diagramadora/` son apps de escritorio
-autocontenidas (cada una con su propio CLAUDE.md/.gitignore/tests).
-`front/` y `backend/` están reservadas para un sistema web futuro, todavía
-sin implementar.
+Sistema web (reemplaza las antiguas apps de escritorio `máquina232/` y
+`Diagramadora/`, borradas del repo — ver `git log`):
+
+- `backend/`: FastAPI. Tests con
+  `backend/.venv/Scripts/python.exe -m pytest -q` (desde `backend/`).
+- `front/`: React + TypeScript + Vite. Chequeo de tipos con
+  `npx tsc --noEmit` (desde `front/`).
+- `docs/`: planes de diseño (`PLAN_*.md`) y datos de ejemplo/referencia
+  (`docs/H1312/`, `docs/Recetas/`).
+
+Ver `README.md` en la raíz para el detalle de cada plan.

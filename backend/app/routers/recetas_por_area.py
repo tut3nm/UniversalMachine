@@ -5,6 +5,7 @@ import io
 from fastapi import APIRouter, HTTPException, UploadFile
 from starlette.responses import StreamingResponse
 
+from app.routers._http import content_disposition
 from app.services import recetas_por_area_service as svc
 
 router = APIRouter(prefix="/api/recetas-por-area", tags=["recetas-por-area"])
@@ -37,5 +38,5 @@ async def generar(listado: UploadFile):
 
     return StreamingResponse(
         io.BytesIO(zip_bytes), media_type="application/zip",
-        headers={"Content-Disposition": f'attachment; filename="{nombre_zip}"'},
+        headers={"Content-Disposition": content_disposition(nombre_zip)},
     )

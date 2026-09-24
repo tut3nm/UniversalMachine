@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import Backups from "./pages/Backups";
 import Dashboard from "./pages/Dashboard";
 import EditorRecetasMatriz from "./pages/EditorRecetasMatriz";
+import FormatosGuardados from "./pages/FormatosGuardados";
 import GenerarRecetas from "./pages/GenerarRecetas";
 import Herramientas from "./pages/Herramientas";
 import Historial from "./pages/Historial";
@@ -25,6 +26,7 @@ export default function App() {
             <Route path="/generador-recetas" element={<GenerarRecetas />} />
             <Route path="/recetas-por-area" element={<RecetasPorArea />} />
             <Route path="/editor-recetas-matriz" element={<EditorRecetasMatriz />} />
+            <Route path="/formatos-guardados" element={<FormatosGuardados />} />
           </Routes>
         </BrowserRouter>
       </DialogoProvider>

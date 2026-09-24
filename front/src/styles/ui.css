@@ -1155,9 +1155,7 @@
 .plan-card__operaciones {
   margin: 0;
   padding-left: 1.1rem;
-  font-family: var(--font-mono);
-  font-size: var(--texto-xs);
-  color: var(--muted);
+  font-size: var(--texto-sm);
 }
 
 .plan-card__advertencias {
@@ -1167,7 +1165,47 @@
   color: var(--warning);
 }
 
-.plan-card--desconocido p {
-  color: var(--muted);
+.plan-card p {
   margin: 0;
+}
+
+.plan-card__campo {
+  font-size: var(--texto-sm);
+}
+
+.plan-card__tablas,
+.plan-card__campos {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: var(--texto-sm);
+}
+
+.plan-card__tabla-campos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+  margin-top: 0.25rem;
+}
+
+.plan-card__tabla-campos input[type="number"] {
+  width: 4.5rem;
+}
+
+.plan-card__tabla-resumen {
+  font-size: var(--texto-xs);
+  margin-top: 0.2rem;
+}
+
+.plan-card__campos code {
+  font-size: var(--texto-xs);
+  overflow-wrap: anywhere;
+}
+
+.asistente-panel__aviso {
+  margin: 0;
+  font-size: var(--texto-sm);
 }

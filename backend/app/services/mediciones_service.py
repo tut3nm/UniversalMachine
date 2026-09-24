@@ -23,15 +23,44 @@ import labeler
 import llm
 import structure
 
+from app.ai import tablas_delimitadas as td
+
 
 def estado_ia() -> dict[str, Any]:
     ok, mensaje = llm.is_available()
     return {"disponible": ok, "mensaje": mensaje}
 
 
+def _procesar_tablas(nombre_datos: str, lineas: list[str], con_anotaciones: bool) -> dict[str, Any]:
+    """CSV con varias tablas (ej. equipo H1312): una hoja por tabla, con los
+    nombres de columna del propio archivo. Ver PLAN_ASISTENTE_IA.md, 12.1."""
+    sep = td.detectar_separador(lineas)
+    resultado = td.leer_tablas(lineas, sep, td.detectar_tablas(lineas, sep))
+    advertencias = list(resultado.advertencias)
+    if con_anotaciones:
+        advertencias.append("El archivo con anotaciones no se usa para archivos con tablas.")
+
+    tmp_dir = tempfile.mkdtemp(prefix="mediciones_")
+    base, _ = os.path.splitext(nombre_datos)
+    out_path = os.path.join(tmp_dir, f"{base}.xlsx")
+    with open(out_path, "wb") as f:
+        f.write(td.escribir_excel(resultado))
+    return {
+        "modo": "tablas",
+        "out_path": out_path,
+        "out_filename": f"{base}.xlsx",
+        "tablas": [td.resumen_tabla(t) for t in resultado.tablas],
+        "advertencias": advertencias,
+    }
+
+
 def procesar(nombre_datos: str, contenido_datos: bytes,
              nombre_anotaciones: str | None, contenido_anotaciones: bytes | None,
              use_ai: bool = True) -> dict[str, Any]:
+    lineas_tabla = td.decodificar(contenido_datos)
+    if td.es_formato_tablas(lineas_tabla):
+        return _procesar_tablas(nombre_datos, lineas_tabla, contenido_anotaciones is not None)
+
     tmp_dir = tempfile.mkdtemp(prefix="mediciones_")
     data_path = os.path.join(tmp_dir, nombre_datos)
     with open(data_path, "wb") as f:
@@ -61,6 +90,7 @@ def procesar(nombre_datos: str, contenido_datos: bytes,
     generic_excel.write_excel(disc, labels, out_path, data_path, annotated_path=annot_path)
 
     return {
+        "modo": "registros",
         "out_path": out_path,
         "out_filename": f"{base}.xlsx",
         "records": len(disc.records),

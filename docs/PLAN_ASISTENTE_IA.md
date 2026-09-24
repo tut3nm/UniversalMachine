@@ -1,8 +1,7 @@
 # Plan: asistente conversacional con IA local + DSL de operaciones
 
-> Estado: PLANIFICADO, sin implementar. Surge de la conversación de diseño del
-> 2026-09-22. Las decisiones de la sección 2 ya están tomadas; lo que quede
-> abierto está marcado **(TBD)**.
+> Estado: fases 1-7 implementadas (la 7, sección 12, corrige las decisiones
+> 4 y 7). Surge de la conversación de diseño del 2026-09-22.
 
 ## 1. Objetivo
 
@@ -248,7 +247,8 @@ Cada fase se puede verificar sola. La destructiva va al final a propósito.
 | 3 | ✅ Endpoints `/api/asistente/{estado,interpretar,ejecutar}` + log | Se puede pedir el ejemplo de 3.2 por HTTP y baja el `.zip` correcto |
 | 4 | ✅ Front: HoverCard, PlanCard, AsistentePanel, cards | Flujo completo en el navegador en las 3 pantallas |
 | 5 | ✅ Validación de consistencia + auditoría | Detecta los dos defectos reales de la sección 5 |
-| 6 | ✅ Migración pendiente + borrado de directorios | `profile_builder.py` migrado; `excel_import.py`/`paths.py` confirmados; `csv_recipe.py`/`recipe_editor.py` migrados completos vía `PLAN_EDITOR_RECETAS_MATRIZ.md`; `máquina232/` y `Diagramadora/` borrados (datos reales sin versionar movidos fuera del repo antes). Suite verde (416 tests), TypeScript limpio. Falta solo el commit del borrado, a criterio del usuario. |
+| 6 | ✅ Migración pendiente + borrado de directorios | `profile_builder.py` migrado; `excel_import.py`/`paths.py` confirmados; `csv_recipe.py`/`recipe_editor.py` migrados completos vía `PLAN_EDITOR_RECETAS_MATRIZ.md`; `máquina232/` y `Diagramadora/` borrados (datos reales sin versionar movidos fuera del repo antes). Suite verde (416 tests), TypeScript limpio. Commiteado en `40c8c52`. |
+| 7 | ✅ Asistente sobre los archivos de la pantalla (sección 12) | Verificado con el modelo real y en el navegador. En `/mediciones`, el pedido del 2026-09-23 con `824902015333_280826_006.csv` da dos hojas correctas; los ~120 CSV de H1312 se detectan como tablas y los `Prod.*.TXT` siguen por el motor de log; en Plantilla, "el campo de la línea N sale de la columna X" cambia los archivos generados. |
 
 ## 9. Tests
 
@@ -283,3 +283,107 @@ Cada fase se puede verificar sola. La destructiva va al final a propósito.
 - Chat en las pantallas heredadas de máquina232.
 - Cambiar el modelo o salir a una API externa.
 - Multiusuario / identificación de quién generó qué.
+
+## 12. Corrección (2026-09-23): el asistente trabaja sobre los archivos de la pantalla
+
+Probado en `/mediciones`: el usuario describió la estructura de su CSV ("de la
+fila 1 a la 12 es la primera tabla, la primera fila son los nombres de
+columna; de la 14 a la 212 la otra; separador coma") y el asistente respondió
+"Esta es la pantalla correcta: subí los archivos arriba". Se comportó como un
+menú de navegación. Además el panel no recibía el archivo de la pantalla, y el
+motor heurístico mezcló las dos tablas en una (199 registros × 135 campos).
+
+Esto corrige dos decisiones de la sección 2:
+
+- **Decisión 4** (la tabulación solo como operación gruesa): no alcanza.
+  Mediciones y Plantilla tienen sus propias operaciones finas.
+- **Decisión 7** (panel en las 3 pantallas): se mantiene, pero **cada panel
+  trabaja sobre la tarea y los archivos de su pantalla**. Se elimina la etapa
+  de intención (sección 3.3, etapa 1): la pantalla ya dice qué tarea es. Queda
+  solo la etapa de parámetros, con una gramática por pantalla. Desaparecen
+  `requiere_pantalla` y el "ir a otra pantalla".
+
+### 12.1 Mediciones: CSV con varias tablas
+
+Los CSV del equipo H1312 (`docs/H1312/`, unos 120 archivos) tienen bloques
+separados por títulos (`[Auftragsdaten]`, `[Messprogrammseite 1]`,
+`# QSStat`) y líneas vacías: un preámbulo y `[Auftragsdaten]` de pares
+clave/valor, y dos tablas con encabezado. El encabezado de
+`Messprogrammseite` tiene 8 nombres pero las filas traen 12 valores, y las
+filas de `QSStat` terminan en coma.
+
+- Motor nuevo determinista `app/ai/tablas_delimitadas.py`: detecta separador
+  (lista cerrada: `,` `;` tab `|`), bloques y tipo de bloque (tabla con
+  encabezado o clave/valor), y escribe **una hoja por bloque** con el nombre
+  del título. Columnas sin nombre → `Columna N`; columna final vacía en todas
+  las filas → se descarta; números → numéricos (salvo ceros a la izquierda).
+- Las líneas de título nunca son encabezado ni dato. Si el usuario dice "la
+  fila 1 es el encabezado" y la fila 1 es `[Messprogrammseite 1]`, se usa la
+  siguiente y la tarjeta lo muestra. El usuario se puede equivocar en una
+  fila; el sistema no debe copiar el error.
+- Operaciones finas: `definir_tablas(tablas=[{desde, hasta, con_encabezado}])`
+  y `usar_separador(separador)`. El modelo solo emite números de fila y un
+  separador de la lista cerrada; los rangos se validan contra el archivo real.
+  Lo que no dice el usuario sale de la detección automática, así que el
+  programa final siempre está completo y queda en el log tal cual se ejecutó.
+- La pantalla usa este motor también en su botón principal cuando el archivo
+  tiene forma de tablas. Si no (los `Prod.*.TXT` de log, sin separadores),
+  sigue el motor de siempre (`structure.discover`).
+- Los nombres de columna se dejan como vienen del archivo: el labeler de IA
+  queda para el formato de log.
+
+### 12.2 Plantilla: indicaciones sobre qué columna llena cada campo
+
+Hoy el motor decide qué columna del listado llena cada `{...}` leyendo el
+comentario `// ...` de esa línea; si no matchea, la línea queda fija. Las
+operaciones finas permiten decirlo en el chat:
+
+- `asignar_columna(linea, columna)`: la línea N de la plantilla (solo líneas
+  que tienen `{...}`) se llena con esa columna.
+- `nombre_archivo_desde(columna)`.
+- `filtrar_filas(columna, valor)`.
+
+Las líneas posibles y las columnas son literales de la gramática, sacados de
+los archivos subidos.
+
+### 12.3 Front
+
+- Cada pantalla le pasa sus archivos al panel. Las tarjetas de prompt son las
+  de la pantalla (ej. en Mediciones: "La tabla 1 va de la fila X a la Y"), no
+  el catálogo de todas.
+- La tarjeta de Mediciones muestra cada tabla (título, filas, fila de
+  encabezado, cantidad de columnas, primeros nombres) y es **editable**:
+  desde/hasta/encabezado por tabla y quitar tablas, con "Actualizar vista
+  previa" (sin IA). Después, "Generar Excel".
+- Si el mensaje no trae ninguna indicación sobre el archivo (el programa
+  final es igual al que se arma sin mensaje), la tarjeta lo dice y muestra
+  lo que se hace sin indicaciones. El asistente no contesta preguntas sobre
+  el sistema.
+
+### 12.4 Lo que apareció al probar con el modelo real
+
+- **Las gramáticas de parámetros nunca habían funcionado.** El parser GBNF
+  de llama.cpp no acepta `_` en nombres de regla (`op_filtrar`,
+  `lista_sufijos`...): `failed to parse grammar`, y el planificador caía en
+  silencio al default. Los tests con modelo stub no lo veían. Reglas
+  renombradas con `-` y un test que fija el alfabeto válido.
+- **Con muchas opciones abiertas, el 1.5B divaga**: copiaba los números del
+  ejemplo del prompt, filtraba por cualquier columna, deletreaba nombres de
+  columna dentro del patrón, repetía operaciones hasta el tope de tokens.
+  La solución fue la misma idea del contrato de la sección 3.4, un paso más
+  fuerte: **en el plan solo puede entrar lo que el mensaje menciona**. Los
+  números de fila, los sufijos, las columnas, los valores de filtro, los
+  campos `#Codigo`/`#Descripcion` y las líneas de plantilla que admite la
+  gramática son los que aparecen en el texto del usuario (y existen en el
+  archivo); agrupar/nombrar/quitar notas solo si el mensaje lo pide con
+  esas palabras. Sin nada mencionado, la única salida es `[]`. El patrón de
+  nombre quedó como `{columna}<sep>...{sufijo}.def.txt`, sin letras libres.
+- Una misma línea de plantilla asignada a dos columnas, o el nombre de
+  archivo desde dos columnas, es un error visible en la tarjeta (antes
+  ganaba la última). Un patrón de nombre sin `{sufijo}`, sin columna o con
+  caracteres inválidos en Windows se rechaza en la validación.
+- **Límite conocido**: con varias indicaciones en un mismo mensaje, en
+  Recetas por área el modelo a veces aplica solo la primera (ej. los
+  sufijos, pero no el filtro). La tarjeta muestra exactamente qué se va a
+  hacer antes de generar. En Mediciones y Plantilla los pedidos compuestos
+  probados salen completos.

@@ -97,7 +97,7 @@ export default function RecetasPorArea() {
 
   return (
     <div className="pagina">
-      <AsistentePanel pantallaActual="/recetas-por-area" listadoRecetas={listado} />
+      <AsistentePanel pantalla="recetas_por_area" archivos={{ listado }} />
       <Header />
       <p className="breadcrumbs">
         <Link to="/herramientas">Herramientas</Link>

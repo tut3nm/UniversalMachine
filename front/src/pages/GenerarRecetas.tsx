@@ -73,7 +73,7 @@ export default function GenerarRecetas() {
 
   return (
     <div className="pagina">
-      <AsistentePanel pantallaActual="/generador-recetas" />
+      <AsistentePanel pantalla="plantilla" archivos={{ plantilla, listado }} />
       <Header />
       <p className="breadcrumbs">
         <Link to="/">Máquinas</Link>

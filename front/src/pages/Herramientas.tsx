@@ -32,6 +32,12 @@ const HERRAMIENTAS: Herramienta[] = [
     descripcion:
       "Para archivos .csv de receta con un parámetro por fila y un producto por columna: exportá a Excel, editá, y volvé a aplicar los cambios al original.",
   },
+  {
+    to: "/formatos-guardados",
+    titulo: "Formatos guardados",
+    descripcion:
+      "Reglas que el chat aprendió en Mediciones, Generador desde plantilla y Recetas por área: ver, renombrar o borrar.",
+  },
 ];
 
 export default function Herramientas() {

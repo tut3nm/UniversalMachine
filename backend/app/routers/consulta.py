@@ -6,6 +6,7 @@ import io
 from fastapi import APIRouter, HTTPException, Query
 from starlette.responses import FileResponse, StreamingResponse
 
+from app.routers._http import content_disposition
 from app.services import consulta_service as svc
 from app.services import maquinas_service as maq_svc
 
@@ -141,5 +142,5 @@ def _csv_response(filas: list[list[str]], nombre_archivo: str) -> StreamingRespo
     buf.seek(0)
     return StreamingResponse(
         buf, media_type="text/csv",
-        headers={"Content-Disposition": f'attachment; filename="{nombre_archivo}"'},
+        headers={"Content-Disposition": content_disposition(nombre_archivo)},
     )

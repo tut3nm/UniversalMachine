@@ -6,6 +6,7 @@ import json
 from fastapi import APIRouter, HTTPException, UploadFile
 from starlette.responses import StreamingResponse
 
+from app.routers._http import content_disposition
 from app.services import editor_recetas_service as svc
 
 router = APIRouter(prefix="/api/editor-recetas", tags=["editor-recetas"])
@@ -23,7 +24,7 @@ async def exportar(csv: UploadFile):
         io.BytesIO(xlsx_bytes),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={
-            "Content-Disposition": f'attachment; filename="{nombre_xlsx}"',
+            "Content-Disposition": content_disposition(nombre_xlsx),
             "X-Editor-Recetas-Resumen": json.dumps(resumen),
         },
     )
@@ -57,7 +58,7 @@ async def aplicar_descargar(csv_original: UploadFile, xlsx_editado: UploadFile):
     return StreamingResponse(
         io.BytesIO(salida_bytes), media_type="text/csv",
         headers={
-            "Content-Disposition": f'attachment; filename="{nombre_salida}"',
+            "Content-Disposition": content_disposition(nombre_salida),
             "X-Editor-Recetas-Resumen": json.dumps(resumen),
         },
     )
