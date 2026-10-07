@@ -100,10 +100,21 @@ def cargar_perfil(machine_id: str) -> Profile:
     return Profile.load(path)
 
 
+class MaquinaSinDatos(Exception):
+    """La maquina no tiene archivo de datos y no hay con que sembrarlo (su
+    perfil no trae archivo inicial, o este no esta disponible)."""
+
+
 def _asegurar_sembrado(profile: Profile) -> None:
     actual, original, meta = _rutas(profile)
     if not os.path.exists(actual):
-        arranque.seed_or_migrate(profile, original, actual, meta)
+        try:
+            arranque.seed_or_migrate(profile, original, actual, meta)
+        except ValueError as e:
+            raise MaquinaSinDatos(
+                f"La máquina «{profile.nombre}» todavía no tiene datos: su archivo inicial "
+                f"no está disponible. Cargá los datos con «Importar». ({e})"
+            ) from e
 
 
 def _cargar_store(profile: Profile) -> DataStore:
@@ -154,6 +165,11 @@ def listar_maquinas() -> list[dict[str, Any]]:
             perfiles.append(cargar_perfil(mid))
         except ProfileError:
             continue
+    for perfil in perfiles:
+        try:
+            _asegurar_sembrado(perfil)
+        except MaquinaSinDatos:
+            pass  # el resumen la muestra como "sin datos todavía"
     resumenes = panel_multi_maquina.resumen_de_todas(perfiles)
     return [dataclasses.asdict(r) for r in resumenes]
 

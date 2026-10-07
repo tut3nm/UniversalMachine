@@ -176,6 +176,22 @@ def construir_perfil(wizard_id: str, machine_id: str, nombre: str, descripcion: 
         elif orientacion == "columnas" and f.get("kind_override"):
             row_kinds[idx] = f["kind_override"]
 
+    if (orientacion == "columnas" and not s.get("perfil_existente")
+            and 0 <= clave_idx < len(grid)):
+        claves = [c.strip() for c in grid[clave_idx][primera_col:] if c.strip()]
+        if len(set(claves)) < 2:
+            sugerida = PB.suggest_clave_row(grid, primera_col)
+            etiqueta = (grid[clave_idx][0] if grid[clave_idx] else "").strip()
+            pista = ""
+            if sugerida is not None and sugerida != clave_idx:
+                pista_etiqueta = (grid[sugerida][0] if grid[sugerida] else "").strip()
+                pista = f" Probá con la fila {sugerida + 1} («{pista_etiqueta}»)."
+            raise WizardError(
+                f"La fila {clave_idx + 1} («{etiqueta}») no sirve como clave: tiene "
+                f"{len(set(claves))} valor(es) distinto(s) en los datos, y la clave tiene que "
+                f"identificar a cada registro con un valor propio.{pista}"
+            )
+
     features = s.get("perfil_existente").features if s.get("perfil_existente") else None
     try:
         if orientacion == "columnas":

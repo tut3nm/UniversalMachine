@@ -51,8 +51,13 @@ def _proceso_vivo(pid) -> bool:
     handle = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
     if not handle:
         return False
+    # OpenProcess tambien funciona con un proceso ya terminado mientras alguien
+    # conserve un handle abierto: hay que mirar que siga realmente activo.
+    STILL_ACTIVE = 259
+    codigo = ctypes.c_ulong()
+    consultado = kernel32.GetExitCodeProcess(handle, ctypes.byref(codigo))
     kernel32.CloseHandle(handle)
-    return True
+    return not consultado or codigo.value == STILL_ACTIVE
 
 
 def leer_lock(data_dir: str) -> dict | None:

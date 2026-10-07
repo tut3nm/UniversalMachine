@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import os
 import sys
+import threading
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from starlette.responses import FileResponse
+from starlette.responses import FileResponse, JSONResponse
 
 from app import _bootstrap  # noqa: F401  (side effect: agrega app/core/ a sys.path)
 import instancia
@@ -26,6 +27,7 @@ from app.routers import mediciones as mediciones_router
 from app.routers import plantillas_masivas as plantillas_masivas_router
 from app.routers import recetas_por_area as recetas_por_area_router
 from app.routers import wizard as wizard_router
+from app.services import maquinas_service
 
 def _front_dist() -> str:
     """En desarrollo, front/dist (si existe: `npm run build` corrido a
@@ -53,10 +55,16 @@ async def lifespan(app: FastAPI):
     # El server de IA es best-effort: si no hay runtime/modelo disponibles
     # (ej. entorno de tests) el asistente queda deshabilitado, pero el resto
     # de la webapp funciona igual. El labeler de mediciones no depende de
-    # esto: usa run_llm() por subprocess directamente.
-    resultado_ia = llm.start_llama_server()
-    if not resultado_ia.ok:
-        log_config.get_logger().warning("IA local (server) no disponible: %s", resultado_ia.error)
+    # esto: usa run_llm() por subprocess directamente. Se levanta en segundo
+    # plano: cargar el modelo (~1 GB) tarda decenas de segundos y uvicorn no
+    # acepta conexiones hasta que termina el arranque, asi que bloquearlo
+    # aca dejaba la ventana sin servidor ("error de conexion").
+    def _arrancar_ia() -> None:
+        resultado_ia = llm.start_llama_server()
+        if not resultado_ia.ok:
+            log_config.get_logger().warning("IA local (server) no disponible: %s", resultado_ia.error)
+
+    threading.Thread(target=_arrancar_ia, daemon=True).start()
     try:
         yield
     finally:
@@ -68,6 +76,11 @@ app = FastAPI(title="Configurador de Planta — webapp", lifespan=lifespan)
 
 # En desarrollo, el frontend corre aparte (Vite dev server) y necesita CORS.
 # Empaquetado, FastAPI sirve el build de front/dist directamente (sin CORS).
+@app.exception_handler(maquinas_service.MaquinaSinDatos)
+def _maquina_sin_datos(_request, exc):
+    return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],

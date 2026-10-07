@@ -44,6 +44,19 @@ if errorlevel 1 (
 )
 
 echo.
+echo === Preparando perfiles de fabrica (solo maquina_232.json) ===
+REM backend\profiles\ puede tener perfiles de prueba locales (sin archivo
+REM inicial) que no deben viajar en el ejecutable: abririan con error.
+if exist "backend\build\profiles_fabrica" rmdir /s /q "backend\build\profiles_fabrica"
+mkdir "backend\build\profiles_fabrica"
+copy /y "backend\profiles\maquina_232.json" "backend\build\profiles_fabrica\" >nul
+if errorlevel 1 (
+  echo [ERROR] No se pudo preparar el perfil de fabrica.
+  pause
+  exit /b 1
+)
+
+echo.
 echo === Compilando el ejecutable (esto puede tardar unos minutos) ===
 pushd "backend"
 "%~dp0backend\.venv\Scripts\python.exe" -m PyInstaller ^
@@ -56,7 +69,7 @@ pushd "backend"
   --collect-submodules uvicorn ^
   --collect-submodules webview ^
   --add-data "%~dp0backend\app\recetas232.csv;." ^
-  --add-data "%~dp0backend\profiles;profiles" ^
+  --add-data "%~dp0backend\build\profiles_fabrica;profiles" ^
   --add-data "%~dp0front\dist;front_dist" ^
   --add-data "%~dp0docs\Recetas;docs\Recetas" ^
   --distpath "..\dist" ^
