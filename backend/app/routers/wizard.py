@@ -56,7 +56,7 @@ class BuildProfileIn(BaseModel):
     machine_id: str
     nombre: str
     descripcion: str = ""
-    clave_idx: int
+    clave_idx: int | None = None  # None = ID automático (el archivo no tiene clave)
     filas: list[FilaWizard]
 
 

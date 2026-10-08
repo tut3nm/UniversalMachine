@@ -10,6 +10,7 @@ import { parsearValorCampo, valorPorDefecto } from "../validacion";
  * con mínimo y máximo, y las mismas validaciones antes de aceptar.
  */
 function ayudaDe(campo: Campo): string {
+  if (campo.sintetica) return "lo asigna el sistema";
   if (campo.rol === "clave") return "identificador único";
   if (campo.min != null && campo.max != null) return `${campo.min} a ${campo.max}`;
   if (esNumerico(campo)) return "número";
@@ -18,7 +19,7 @@ function ayudaDe(campo: Campo): string {
 
 export default function RegistroDialog({
   titulo,
-  campos,
+  campos: camposTodos,
   registro = null,
   onGuardar,
   onCerrar,
@@ -33,6 +34,13 @@ export default function RegistroDialog({
   onGuardar: (valores: Record<string, unknown>) => Promise<string | void>;
   onCerrar: () => void;
 }) {
+  // El ID automático no se tipea: en el alta ni aparece, al editar se ve
+  // pero no se puede cambiar.
+  const campos = useMemo(
+    () => camposTodos.filter((c) => !(c.sintetica && !registro)),
+    [camposTodos, registro],
+  );
+
   const inicial = useMemo(() => {
     const v: Record<string, string> = {};
     for (const c of campos) {
@@ -50,6 +58,7 @@ export default function RegistroDialog({
   const aceptar = async () => {
     const salida: Record<string, unknown> = {};
     for (const campo of campos) {
+      if (campo.sintetica) continue; // el servidor no lo acepta como entrada
       const parseo = parsearValorCampo(campo, valores[campo.nombre_interno] ?? "");
       if (parseo.error) {
         setProblema(parseo.error);
@@ -102,6 +111,7 @@ export default function RegistroDialog({
                   min={spin ? campo.min ?? undefined : undefined}
                   max={spin ? campo.max ?? undefined : undefined}
                   value={valores[campo.nombre_interno] ?? ""}
+                  disabled={campo.sintetica}
                   autoComplete="off"
                   onChange={(e) =>
                     setValores((v) => ({ ...v, [campo.nombre_interno]: e.target.value }))

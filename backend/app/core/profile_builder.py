@@ -26,16 +26,40 @@ from __future__ import annotations
 import csv
 import re
 
+from profile import ETIQUETA_ID_AUTO
+
 # ---------------------------------------------------------------------------
 #  Detección de formato de archivo
 # ---------------------------------------------------------------------------
 
+def detectar_codificacion(raw: bytes) -> tuple[str, bool]:
+    """(codificación de Python, tiene_bom_utf8) de los bytes de un archivo.
+
+    Orden: BOM UTF-16 / UTF-8, UTF-8 estricto, Windows-1252 (lo que exporta
+    WinCC y Excel en español) y, como último recurso, latin-1 (nunca falla)."""
+    if raw.startswith((b"\xff\xfe", b"\xfe\xff")):
+        return "utf-16", False
+    if raw.startswith(b"\xef\xbb\xbf"):
+        return "utf-8", True
+    for enc in ("utf-8", "cp1252"):
+        try:
+            raw.decode(enc)
+            return enc, False
+        except UnicodeDecodeError as e:
+            pass
+    return "latin-1", False
+
+
 def sniff_csv(path: str) -> dict:
-    """Detecta BOM, fin de línea, delimitador y símbolo decimal de un CSV."""
+    """Detecta codificación, BOM, fin de línea, delimitador y símbolo decimal
+    de un CSV."""
     with open(path, "rb") as f:
-        raw = f.read(65536)
-    bom = raw.startswith(b"\xef\xbb\xbf")
-    text = raw.decode("utf-8-sig", errors="replace")
+        completo = f.read()
+    # La codificación se decide con el archivo entero: un solo carácter fuera
+    # de UTF-8 pasado el primer bloque alcanza para que no sea UTF-8.
+    encoding, bom = detectar_codificacion(completo)
+    raw = completo[:65536]
+    text = raw.decode("utf-8-sig" if encoding == "utf-8" else encoding, errors="replace")
     if "\r\n" in text:
         fin = "CRLF"
     elif "\r" in text and "\n" not in text:
@@ -54,11 +78,17 @@ def sniff_csv(path: str) -> dict:
         simbolo_decimal = m.group(1)
 
     return {"bom": bom, "fin_de_linea": fin, "delimitador": delimitador,
-            "simbolo_decimal": simbolo_decimal}
+            "simbolo_decimal": simbolo_decimal, "encoding": encoding}
 
 
-def read_grid(path: str, delimitador: str) -> list[list[str]]:
-    with open(path, encoding="utf-8-sig", newline="") as f:
+def read_grid(path: str, delimitador: str, encoding: str | None = None) -> list[list[str]]:
+    """Lee el archivo completo como grilla de celdas. Sin `encoding`, lo
+    detecta de los bytes (ver detectar_codificacion)."""
+    if encoding is None:
+        with open(path, "rb") as f:
+            encoding, _ = detectar_codificacion(f.read())
+    with open(path, encoding="utf-8-sig" if encoding == "utf-8" else encoding,
+              newline="") as f:
         return list(csv.reader(f, delimiter=delimitador))
 
 
@@ -95,7 +125,8 @@ def classify_row(grid: list[list[str]], row_idx: int, primera_col: int) -> str:
     return "dato"
 
 
-def suggest_clave_row(grid: list[list[str]], primera_col: int) -> int | None:
+def suggest_clave_row(grid: list[list[str]], primera_col: int,
+                      aproximada: bool = True) -> int | None:
     """Primera fila con valores todos distintos entre sí: heurística simple
     para sugerir cuál es el código/clave de cada pieza. Se prefiere una fila
     de TEXTO (más probable que sea un código real y no una medición), pero si
@@ -109,7 +140,8 @@ def suggest_clave_row(grid: list[list[str]], primera_col: int) -> int | None:
     repiten un código en variantes distintas del mismo modelo), se ofrece
     como último recurso la fila con más valores casi-únicos (mayor
     proporción de distintos/total, con más valores en total como
-    desempate) en vez de no sugerir nada."""
+    desempate) en vez de no sugerir nada (salvo `aproximada=False`: el wizard
+    prefiere proponer un ID automático antes que una clave con repetidos)."""
     candidato_numerico: int | None = None
     mejor_aprox: tuple[float, int, int] | None = None  # (proporción, r, total)
     for r, row in enumerate(grid):
@@ -139,12 +171,34 @@ def suggest_clave_row(grid: list[list[str]], primera_col: int) -> int | None:
 
     if candidato_numerico is not None:
         return candidato_numerico
+    if not aproximada:
+        return None  # el wizard prefiere ID automático a una clave con repetidos
     return mejor_aprox[1] if mejor_aprox is not None else None
 
 
 # ---------------------------------------------------------------------------
 #  Detección de tipo + formato para un campo, a partir de una muestra
 # ---------------------------------------------------------------------------
+
+def campo_id_automatico() -> dict:
+    """Campo clave sintético: no existe en el archivo de la máquina."""
+    return {
+        "nombre_interno": "id", "rol": "clave", "tipo": "entero",
+        "titulo_ui": "ID", "etiqueta": ETIQUETA_ID_AUTO,
+        "visible": True, "sintetica": True,
+    }
+
+
+def _fila_ancla(grid: list[list[str]], primera_col: int) -> int:
+    """Sin campo clave, primera fila que ya es dato por registro: lo que
+    queda ANTES son encabezados del export (título, separadores, filas
+    vacías) y se conservan como filas fijas. Es la primera fila con valores
+    que varían entre registros (o la secuencia 1..N, si viene antes)."""
+    for r in range(len(grid)):
+        if classify_row(grid, r, primera_col) != "fija":
+            return r
+    return 0
+
 
 _INT_RE = re.compile(r"^[+-]?\d+$")
 
@@ -204,7 +258,7 @@ def _slug(text: str, fallback_idx: int, used: set[str]) -> str:
 def build_profile_columnas(machine_id: str, nombre: str, descripcion: str,
                             archivo_inicial: str, info: dict,
                             grid: list[list[str]], primera_col: int,
-                            clave_row: int, campos_elegidos: list[dict],
+                            clave_row: int | None, campos_elegidos: list[dict],
                             row_kinds: dict[int, str] | None = None,
                             features: dict | None = None) -> dict:
     """Arma el perfil JSON (orientacion='columnas') a partir de lo que el
@@ -224,8 +278,15 @@ def build_profile_columnas(machine_id: str, nombre: str, descripcion: str,
     no se detecte como fija/índice, se agrega como campo OCULTO
     (visible=False): viaja con cada registro y se preserva byte a byte, pero
     nunca se muestra ni se edita en la UI.
+
+    `clave_row=None`: el archivo no tiene una fila que identifique a cada
+    registro. El perfil lleva un campo clave sintético (ID automático, ver
+    campo_id_automatico) y las filas anteriores a la primera fila con datos
+    variables quedan como filas fijas.
     """
     row_kinds = row_kinds or {}
+    id_auto = clave_row is None
+    ancla = _fila_ancla(grid, primera_col) if id_auto else (clave_row or 0)
     elegidas_por_fila = {c["fila"]: c for c in campos_elegidos}
     max_fila = len(grid) - 1
 
@@ -235,9 +296,9 @@ def build_profile_columnas(machine_id: str, nombre: str, descripcion: str,
         "descripcion": descripcion,
         "archivo_inicial": archivo_inicial,
         "archivo": {
-            "extension": "csv",
+            "extension": info.get("extension", "csv"),
             "delimitador": info["delimitador"],
-            "encoding": "utf-8",
+            "encoding": info.get("encoding", "utf-8"),
             "bom": info["bom"],
             "fin_de_linea": info["fin_de_linea"],
             "orientacion": "columnas",
@@ -259,6 +320,9 @@ def build_profile_columnas(machine_id: str, nombre: str, descripcion: str,
     filas_fijas = []
     fila_indice = None
     campos = []
+    if id_auto:
+        campos.append(campo_id_automatico())
+        used_names.add("id")
 
     for r in range(max_fila + 1):
         # `etiqueta` se guarda SIN recortar: es la celda de columna 0, que
@@ -303,7 +367,7 @@ def build_profile_columnas(machine_id: str, nombre: str, descripcion: str,
             kind = row_kinds[r]  # elección explícita del usuario (wizard): se respeta tal cual
         else:
             kind = classify_row(grid, r, primera_col)
-            if kind == "fija" and r > clave_row:
+            if kind == "fija" and (r >= ancla if id_auto else r > ancla):
                 # Una fila DESPUÉS de la clave es, por definición, un dato
                 # por registro (aunque hoy sea constante en toda la muestra:
                 # un parámetro de proceso puede coincidir para todas las
@@ -339,17 +403,21 @@ def build_profile_columnas(machine_id: str, nombre: str, descripcion: str,
 def build_profile_filas(machine_id: str, nombre: str, descripcion: str,
                          archivo_inicial: str, info: dict,
                          grid: list[list[str]], header_row: int,
-                         primera_fila_datos: int, clave_col: int,
+                         primera_fila_datos: int, clave_col: int | None,
                          campos_elegidos: list[dict],
                          features: dict | None = None) -> dict:
     """Arma el perfil JSON (orientacion='filas': CSV normal, un registro por
     fila). Igual que build_profile_columnas pero en el otro eje: toda columna
-    no elegida como campo visible se agrega como campo oculto."""
+    no elegida como campo visible se agrega como campo oculto. Con
+    `clave_col=None` la clave es un ID automático (ver campo_id_automatico)."""
     header = grid[header_row] if header_row < len(grid) else []
     elegidas_por_col = {c["columna"]: c for c in campos_elegidos}
     used_names: set[str] = {c["nombre_interno"] for c in campos_elegidos}
 
     campos = []
+    if clave_col is None:
+        campos.append(campo_id_automatico())
+        used_names.add("id")
     for i, h in enumerate(header):
         etiqueta = (h or "").strip()
         if i == clave_col:
@@ -389,8 +457,8 @@ def build_profile_filas(machine_id: str, nombre: str, descripcion: str,
         "id": machine_id, "nombre": nombre, "descripcion": descripcion,
         "archivo_inicial": archivo_inicial,
         "archivo": {
-            "extension": "csv", "delimitador": info["delimitador"],
-            "encoding": "utf-8", "bom": info["bom"],
+            "extension": info.get("extension", "csv"), "delimitador": info["delimitador"],
+            "encoding": info.get("encoding", "utf-8"), "bom": info["bom"],
             "fin_de_linea": info["fin_de_linea"], "orientacion": "filas",
         },
         "estructura": {"fila_encabezado": header_row,
@@ -440,7 +508,7 @@ def build_scaffold(machine_id: str, nombre: str, descripcion: str,
             "id": machine_id, "nombre": nombre, "descripcion": descripcion,
             "archivo_inicial": archivo_inicial,
             "archivo": {"extension": "csv", "delimitador": info["delimitador"],
-                        "encoding": "utf-8", "bom": info["bom"],
+                        "encoding": info.get("encoding", "utf-8"), "bom": info["bom"],
                         "fin_de_linea": info["fin_de_linea"], "orientacion": "filas"},
             "estructura": {"fila_encabezado": 0, "primera_fila_datos": 1},
             "campos": campos,
@@ -477,7 +545,7 @@ def build_scaffold(machine_id: str, nombre: str, descripcion: str,
             "id": machine_id, "nombre": nombre, "descripcion": descripcion,
             "archivo_inicial": archivo_inicial,
             "archivo": {"extension": "csv", "delimitador": info["delimitador"],
-                        "encoding": "utf-8", "bom": info["bom"],
+                        "encoding": info.get("encoding", "utf-8"), "bom": info["bom"],
                         "fin_de_linea": info["fin_de_linea"], "orientacion": "columnas"},
             "estructura": {"columna_etiquetas": 0, "primera_columna_datos": 1},
             "campos": campos,

@@ -18,8 +18,9 @@ from __future__ import annotations
 import csv
 import io
 
-from profile import Campo, Profile
+from profile import ETIQUETA_ID_AUTO, Campo, Profile
 from io_seguro import escribir_atomico
+from texto_limpio import limpiar_grid
 
 
 def _to_number(value: str, campo: Campo):
@@ -132,6 +133,9 @@ class DataStore:
         # de la importación (se llama una vez por fila del Excel/CSV): sin
         # esto, comparar N filas contra M registros es O(N·M).
         self._indice_claves: dict[str, int] | None = None
+        # Celdas a las que la limpieza de acentos les cambió el texto al
+        # cargar (0 si el perfil no la usa o no había nada que limpiar).
+        self.celdas_limpiadas = 0
 
     # -- Carga -----------------------------------------------------------------
     @classmethod
@@ -139,15 +143,70 @@ class DataStore:
         encoding = "utf-8-sig" if profile.encoding.startswith("utf-8") else profile.encoding
         with open(path, "r", encoding=encoding, newline="") as f:
             grid = list(csv.reader(f, delimiter=profile.delimitador))
+        limpiadas = limpiar_grid(grid) if profile.limpieza_acentos else 0
+        ids = cls._extraer_ids(grid, profile) if profile.id_auto else None
         if profile.orientacion == "columnas":
             records, raw_cells = cls._parse_columnas(grid, profile)
         else:
             records, raw_cells = cls._parse_filas(grid, profile)
         store = cls(profile, records, raw_cells)
+        store.celdas_limpiadas = limpiadas
+        if profile.id_auto:
+            store._asignar_ids(ids or [])
         if profile.orientacion == "columnas":
             store.advertencias = cls._detectar_columnas_fantasma(
                 grid, profile, profile.primera_columna_datos, len(records))
         return store
+
+    @staticmethod
+    def _extraer_ids(grid: list[list[str]], profile: Profile) -> list[str]:
+        """Saca de la grilla (in situ) la fila/columna donde actual.<ext>
+        guarda el ID automático y devuelve sus valores, uno por registro. Si
+        el archivo todavía no la trae (primera carga, o es el original tal
+        como lo exportó la máquina) devuelve []: los IDs se generan."""
+        if profile.orientacion == "columnas":
+            for r, fila in enumerate(grid):
+                if fila and fila[0] == ETIQUETA_ID_AUTO:
+                    del grid[r]
+                    return fila[profile.primera_columna_datos:]
+            return []
+        encabezado = grid[profile.fila_encabezado] if profile.fila_encabezado < len(grid) else []
+        if ETIQUETA_ID_AUTO not in encabezado:
+            return []
+        j = encabezado.index(ETIQUETA_ID_AUTO)
+        ids: list[str] = []
+        for i, fila in enumerate(grid):
+            valor = fila.pop(j) if j < len(fila) else ""
+            if i >= profile.primera_fila_datos and any(c != "" for c in fila):
+                ids.append(valor)
+        return ids
+
+    def siguiente_id(self) -> int:
+        clave = self.profile.campo_clave().nombre_interno
+        return max((r[clave] for r in self.records if isinstance(r[clave], int)),
+                   default=0) + 1
+
+    def _asignar_ids(self, ids: list[str]) -> None:
+        """Pone el ID de cada registro: el que traía el archivo si es un
+        entero sin repetir, y uno nuevo (mayor a todos) si falta o está
+        repetido. Así un ID nunca se reutiliza ni se pisa, y borrar un
+        registro no cambia el ID de los demás."""
+        clave = self.profile.campo_clave().nombre_interno
+        vistos: set[int] = set()
+        pendientes: list[int] = []
+        for i, rec in enumerate(self.records):
+            txt = ids[i].strip() if i < len(ids) else ""
+            valor = int(txt) if txt.isdigit() and int(txt) > 0 else 0
+            if valor and valor not in vistos:
+                vistos.add(valor)
+                rec[clave] = valor
+            else:
+                pendientes.append(i)
+        proximo = max(vistos, default=0) + 1
+        for i in pendientes:
+            self.records[i][clave] = proximo
+            proximo += 1
+        self._indice_claves = None
 
     @staticmethod
     def _detectar_columnas_fantasma(grid: list[list[str]], profile: Profile,
@@ -183,16 +242,30 @@ class DataStore:
     def _parse_columnas(grid: list[list[str]], profile: Profile
                          ) -> tuple[list[dict], list[dict]]:
         clave = profile.campo_clave()
-        if clave.fila >= len(grid):
-            raise ValueError("El archivo no tiene la fila de la clave esperada "
-                             f"(fila {clave.fila}).")
-
-        # Cantidad de registros = ancho de la fila-clave, sin celdas vacías al final.
-        key_row = list(grid[clave.fila])
-        while key_row and key_row[-1] == "":
-            key_row.pop()
         primera = profile.primera_columna_datos
-        n = len(key_row) - primera
+        if clave.sintetica:
+            # Sin fila-clave: la cantidad de registros llega hasta la última
+            # celda con datos de cualquier campo o de la fila índice.
+            filas_datos = [c.fila for c in profile.campos if not c.sintetica]
+            if profile.fila_indice:
+                filas_datos.append(profile.fila_indice["fila"])
+            ancho = 0
+            for fila in filas_datos:
+                if fila < len(grid):
+                    celdas = grid[fila]
+                    ultima = max((j for j, v in enumerate(celdas) if v != ""), default=-1)
+                    ancho = max(ancho, ultima + 1)
+            n = max(0, ancho - primera)
+        else:
+            if clave.fila >= len(grid):
+                raise ValueError("El archivo no tiene la fila de la clave esperada "
+                                 f"(fila {clave.fila}).")
+
+            # Cantidad de registros = ancho de la fila-clave, sin celdas vacías al final.
+            key_row = list(grid[clave.fila])
+            while key_row and key_row[-1] == "":
+                key_row.pop()
+            n = len(key_row) - primera
 
         def cell(fila: int, col: int, default: str = "") -> str:
             row = grid[fila] if fila < len(grid) else []
@@ -203,6 +276,9 @@ class DataStore:
         for c in range(primera, primera + n):
             rec, raw = {}, {}
             for campo in profile.campos:
+                if campo.sintetica:
+                    rec[campo.nombre_interno] = 0  # lo completa _asignar_ids
+                    continue
                 celda = cell(campo.fila, c)
                 raw[campo.nombre_interno] = celda
                 if campo.es_clave:
@@ -235,13 +311,16 @@ class DataStore:
             raise ValueError(f"No encuentro la columna del campo "
                              f"'{campo.nombre_interno}' (etiqueta '{campo.etiqueta}').")
 
-        cols = {c.nombre_interno: col_de(c) for c in profile.campos}
+        cols = {c.nombre_interno: col_de(c) for c in profile.campos if not c.sintetica}
         records, raw_cells = [], []
         for row in grid[profile.primera_fila_datos:]:
             if not row or all(cell == "" for cell in row):
                 continue
             rec, raw = {}, {}
             for campo in profile.campos:
+                if campo.sintetica:
+                    rec[campo.nombre_interno] = 0  # lo completa _asignar_ids
+                    continue
                 idx = cols[campo.nombre_interno]
                 celda = row[idx] if idx < len(row) else ""
                 raw[campo.nombre_interno] = celda
@@ -256,11 +335,26 @@ class DataStore:
         return records, raw_cells
 
     # -- Serialización (fiel al formato original) ------------------------------
-    def to_grid(self) -> list[list[str]]:
+    def to_grid(self, incluir_id: bool = False) -> list[list[str]]:
+        """Grilla completa del archivo. `incluir_id` agrega la fila/columna
+        con el ID automático (solo para actual.<ext>, nunca para el archivo
+        que va a la máquina)."""
         grid = (self._grid_columnas() if self.profile.orientacion == "columnas"
                 else self._grid_filas())
+        if incluir_id and self.profile.id_auto:
+            self._agregar_ids(grid)
         self._verificar_ancho_consistente(grid)
         return grid
+
+    def _agregar_ids(self, grid: list[list[str]]) -> None:
+        clave = self.profile.campo_clave().nombre_interno
+        ids = [str(r[clave]) for r in self.records]
+        if self.profile.orientacion == "columnas":
+            grid.append([ETIQUETA_ID_AUTO] + [""] * (self.profile.primera_columna_datos - 1) + ids)
+        else:
+            grid[0].append(ETIQUETA_ID_AUTO)
+            for fila, valor in zip(grid[1:], ids):
+                fila.append(valor)
 
     @staticmethod
     def _verificar_ancho_consistente(grid: list[list[str]]) -> None:
@@ -291,11 +385,11 @@ class DataStore:
         filas_usadas = [ff["fila"] for ff in p.filas_fijas]
         if p.fila_indice:
             filas_usadas.append(p.fila_indice["fila"])
-        filas_usadas += [c.fila for c in p.campos]
+        filas_usadas += [c.fila for c in p.campos if not c.sintetica]
         max_fila = max(filas_usadas)
 
         fijas = {ff["fila"]: ff for ff in p.filas_fijas}
-        campos_por_fila = {c.fila: c for c in p.campos}
+        campos_por_fila = {c.fila: c for c in p.campos if not c.sintetica}
 
         grid: list[list[str]] = []
         for r in range(max_fila + 1):
@@ -320,7 +414,7 @@ class DataStore:
     def _grid_filas(self) -> list[list[str]]:
         p = self.profile
         campos_ordenados = sorted(
-            p.campos,
+            (c for c in p.campos if not c.sintetica),
             key=lambda c: (c.columna if c.columna is not None else 1_000_000))
         header = [c.etiqueta or c.nombre_interno for c in campos_ordenados]
         grid = [header]
@@ -338,20 +432,20 @@ class DataStore:
             return raw[campo.nombre_interno]
         return _format_value(self.records[index][campo.nombre_interno], campo)
 
-    def to_text(self) -> str:
+    def to_text(self, incluir_id: bool = False) -> str:
         buf = io.StringIO()
         writer = csv.writer(buf, delimiter=self.profile.delimitador,
                             lineterminator=self.profile.fin_de_linea)
-        writer.writerows(self.to_grid())
+        writer.writerows(self.to_grid(incluir_id))
         return buf.getvalue()
 
-    def save(self, path: str) -> None:
+    def save(self, path: str, incluir_id: bool = True) -> None:
         """Escritura atómica (ver io_seguro.py): el archivo destino nunca
         queda a medio escribir, ni siquiera si el proceso se corta en el
         medio. Crítico acá porque este archivo es el que se sube al HMI de
         la máquina."""
         encoding = "utf-8-sig" if self.profile.bom else self.profile.encoding
-        escribir_atomico(path, self.to_text(), encoding=encoding)
+        escribir_atomico(path, self.to_text(incluir_id), encoding=encoding)
 
     # -- CRUD ------------------------------------------------------------------
     def key_of(self, rec: dict) -> str:
@@ -368,6 +462,14 @@ class DataStore:
         return rec
 
     def add(self, rec: dict) -> dict:
+        if self.profile.id_auto:
+            # Un registro que vuelve (deshacer una baja) conserva su ID si
+            # sigue libre; uno nuevo, o con el ID ya tomado, recibe el próximo.
+            clave = self.profile.campo_clave().nombre_interno
+            actual = rec.get(clave)
+            if (not isinstance(actual, int) or isinstance(actual, bool) or actual <= 0
+                    or self.find_key(str(actual)) != -1):
+                rec[clave] = self.siguiente_id()
         self.records.append(rec)
         self._raw.append({})  # registro nuevo: todas sus celdas se formatean
         if self._indice_claves is not None:
@@ -380,6 +482,8 @@ class DataStore:
 
     def update(self, index: int, valores: dict) -> None:
         clave_nombre = self.profile.campo_clave().nombre_interno
+        if self.profile.id_auto:
+            valores = {k: v for k, v in valores.items() if k != clave_nombre}
         if clave_nombre in valores:
             # Cambia el mapeo clave->posición: más simple y seguro
             # invalidar el índice que actualizarlo a mano acá.

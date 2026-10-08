@@ -59,6 +59,8 @@ export default function WizardMaquinaDialog({
   const [primeraCol, setPrimeraCol] = useState(1);
 
   const [clasificacion, setClasificacion] = useState<WizardClasificacion | null>(null);
+  // null = el archivo no tiene una fila/columna que identifique a cada
+  // registro: el sistema les asigna un ID automático.
   const [claveIdx, setClaveIdx] = useState<number | null>(null);
   const [filasEstado, setFilasEstado] = useState<Record<number, FilaEstado>>({});
 
@@ -115,7 +117,7 @@ export default function WizardMaquinaDialog({
     setFilasEstado((s) => ({ ...s, [idx]: { ...s[idx], ...cambios } }));
 
   const onContinuarCampos = async () => {
-    if (!inicio || claveIdx === null) return;
+    if (!inicio) return;
     setCargando(true);
     setError(null);
     try {
@@ -219,10 +221,10 @@ export default function WizardMaquinaDialog({
             />
           </div>
           <div className="wiz-campo">
-            <label>Archivo CSV de muestra</label>
+            <label>Archivo de muestra (CSV o TXT)</label>
             <input
               type="file"
-              accept=".csv"
+              accept=".csv,.txt"
               onChange={(e) => setArchivo(e.target.files?.[0] ?? null)}
             />
           </div>
@@ -298,6 +300,30 @@ export default function WizardMaquinaDialog({
             Elegí cuál es el código (clave) y qué otras filas/columnas mostrar como parámetros.
             Lo que no marques queda oculto: viaja con cada registro pero nunca se muestra.
           </p>
+          {inicio && inicio.celdas_limpiadas > 0 && (
+            <p className="muted">
+              Se sacaron acentos y diéresis en {inicio.celdas_limpiadas} celda(s) del archivo
+              (por ejemplo «ö» → «o»). Se repite cada vez que se abre el archivo.
+            </p>
+          )}
+          <div className="wiz-fila">
+            <label>
+              <input
+                type="radio"
+                name="wiz-clave"
+                checked={claveIdx === null}
+                onChange={() => setClaveIdx(null)}
+                title="El archivo no tiene clave: usar un ID automático"
+              />
+            </label>
+            <strong>Sin clave: ID automático</strong>
+            <span />
+            <span />
+            <span className="wiz-fila-muestra">
+              Cada registro recibe un número propio (columna «ID»). No se exporta a la máquina.
+              Recomendado si ninguna fila/columna es única para cada registro.
+            </span>
+          </div>
           <div>
             {clasificacion.filas.map((f: FilaClasificada) => {
               const estado = filasEstado[f.idx];
@@ -386,7 +412,7 @@ export default function WizardMaquinaDialog({
             <Boton
               tipo="primary"
               onClick={() => void onContinuarCampos()}
-              disabled={cargando || claveIdx === null}
+              disabled={cargando}
             >
               {cargando ? "Generando…" : "Continuar"}
             </Boton>
@@ -407,6 +433,13 @@ export default function WizardMaquinaDialog({
                 {validacion.n_registros} registro(s) · {validacion.n_visibles} campo(s)
                 visible(s) · {validacion.n_ocultos} campo(s) oculto(s)
               </p>
+              {validacion.advertencias.length > 0 && (
+                <ul className="muted">
+                  {validacion.advertencias.map((a) => (
+                    <li key={a}>{a}</li>
+                  ))}
+                </ul>
+              )}
             </>
           ) : (
             <>

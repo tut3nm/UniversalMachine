@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import dataclasses
 import os
+import tempfile
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -181,4 +182,11 @@ def ruta_exportar(machine_id: str, cual: str) -> tuple[str, str]:
     if not os.path.exists(ruta):
         raise FileNotFoundError(f"No existe el archivo '{cual}' de esta máquina.")
     nombre = f"{profile.id}_{cual}.{profile.extension}"
+    if cual == "actual" and (profile.id_auto or profile.limpieza_acentos):
+        # actual.<ext> es el archivo de trabajo (lleva la fila de IDs); lo
+        # que va a la máquina se regenera sin ella y con el texto ya limpio.
+        destino_dir = os.path.join(tempfile.gettempdir(), "universal_machine_export")
+        os.makedirs(destino_dir, exist_ok=True)
+        ruta = os.path.join(destino_dir, f"{profile.id}_{nombre}")
+        DataStore.load(actual, profile).save(ruta, incluir_id=False)
     return ruta, nombre

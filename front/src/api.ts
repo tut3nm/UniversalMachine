@@ -108,6 +108,8 @@ export interface Campo {
   max?: number | null;
   default?: unknown;
   formato?: Record<string, unknown>;
+  /** Clave que genera el sistema (ID automático): no se tipea ni se edita. */
+  sintetica?: boolean;
 }
 
 export interface DetalleMaquina {
@@ -381,7 +383,7 @@ export const api = {
     machineId: string,
     nombre: string,
     descripcion: string,
-    claveIdx: number,
+    claveIdx: number | null,
     filas: FilaWizardIn[],
   ) =>
     req<PerfilWizard>("/api/wizard/build-profile", {
@@ -827,6 +829,8 @@ export interface WizardInicio {
   wizard_id: string;
   modo: "alta" | "edicion";
   info: Record<string, unknown>;
+  /** Celdas a las que se les sacó acentos/diéresis al leer el archivo. */
+  celdas_limpiadas: number;
   n_filas: number;
   n_columnas: number;
   /** Primeras 12 filas crudas del archivo, para la vista previa del paso 1. */
@@ -882,6 +886,10 @@ export interface WizardValidacion {
   primer_diff_byte: number | null;
   orig_len: number | null;
   regen_len: number | null;
+  celdas_limpiadas: number;
+  id_automatico: boolean;
+  /** Avisos que no frenan el alta (claves repetidas, limpieza de texto, etc.). */
+  advertencias: string[];
 }
 
 // -- asistente embebido (DSL de operaciones) --------------------------------

@@ -29,6 +29,11 @@ TIPOS_VALIDOS = {"texto", "entero", "entero_ceros", "decimal"}
 ROLES_VALIDOS = {"clave", "parametro"}
 ORIENTACIONES = {"columnas", "filas"}
 
+# Etiqueta reservada de la fila/columna donde actual.<ext> guarda el ID
+# automático de cada registro (clave "sintética", sin lugar en el archivo de
+# la máquina). Solo existe en el archivo de trabajo: al exportar se quita.
+ETIQUETA_ID_AUTO = "__ID_AUTO__"
+
 
 class ProfileError(ValueError):
     """El perfil JSON es inválido o incompleto."""
@@ -50,6 +55,9 @@ class Campo:
                                     # registro (crece/achica con alta/baja)
                                     # pero no se muestra ni se edita en la UI.
     formato: dict = field(default_factory=dict)
+    sintetica: bool = False        # solo para la clave: la genera el sistema
+                                    # (ID automático); no está en el archivo
+                                    # que se manda a la máquina.
     # formato (según tipo):
     #   entero_ceros: {"ancho": N}                 -> rellena con ceros a la izq.
     #   decimal:      {"separador_decimal": ",",   -> "." o "," al formatear
@@ -100,6 +108,18 @@ class Profile:
             if c.es_clave:
                 return c
         raise ProfileError("El perfil no define un campo con rol 'clave'.")
+
+    @property
+    def id_auto(self) -> bool:
+        """La clave es un ID que genera el sistema (el archivo de la máquina
+        no trae ninguna fila/columna que identifique a cada registro)."""
+        return any(c.es_clave and c.sintetica for c in self.campos)
+
+    @property
+    def limpieza_acentos(self) -> bool:
+        """Al abrir el archivo se sacan acentos y diéresis de todas las
+        celdas (ver texto_limpio)."""
+        return bool((self.features.get("limpieza_texto") or {}).get("acentos"))
 
     def parametros(self) -> list[Campo]:
         return [c for c in self.campos if c.rol == "parametro"]
@@ -303,6 +323,8 @@ class Profile:
         if self.fila_indice:
             ocupar(self.fila_indice.get("fila"), "la fila índice")
         for c in self.campos:
+            if c.sintetica:
+                continue  # el ID automático no ocupa ninguna fila del archivo
             ocupar(c.fila, f"el campo '{c.nombre_interno}'")
 
         max_fila = max(ocupadas)
@@ -324,6 +346,9 @@ def _campo_from_dict(cd: dict, idx: int, orientacion: str) -> Campo:
     if rol not in ROLES_VALIDOS:
         raise ProfileError(f"rol '{rol}' no válido en el campo "
                            f"'{cd['nombre_interno']}' (usar {sorted(ROLES_VALIDOS)}).")
+    if cd.get("sintetica") and rol != "clave":
+        raise ProfileError(f"El campo '{cd['nombre_interno']}': solo la clave "
+                           "puede ser sintética (ID automático).")
     return Campo(
         nombre_interno=cd["nombre_interno"],
         rol=rol,
@@ -337,4 +362,5 @@ def _campo_from_dict(cd: dict, idx: int, orientacion: str) -> Campo:
         default=cd.get("default"),
         visible=bool(cd.get("visible", True)),
         formato=dict(cd.get("formato", {}) or {}),
+        sintetica=bool(cd.get("sintetica", False)),
     )

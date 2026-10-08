@@ -8,6 +8,7 @@ reinicio del backend ni escala a múltiples workers — aceptable para Fase 1
 
 from __future__ import annotations
 
+import collections
 import dataclasses
 import os
 import tempfile
@@ -21,6 +22,9 @@ import paths
 import profile_builder as PB
 from datastore import DataStore
 from profile import Profile, ProfileError
+from texto_limpio import limpiar_grid, quitar_acentos
+
+_EXTENSIONES = ("csv", "txt")
 
 _SESIONES: dict[str, dict[str, Any]] = {}
 _TTL_SEGUNDOS = 2 * 60 * 60  # una sesión de wizard abandonada se purga sola
@@ -51,12 +55,18 @@ def iniciar_alta(nombre_archivo: str, contenido: bytes) -> dict[str, Any]:
     with open(csv_path, "wb") as f:
         f.write(contenido)
     info = PB.sniff_csv(csv_path)
-    grid = PB.read_grid(csv_path, info["delimitador"])
+    ext = os.path.splitext(nombre_archivo or "")[1].lstrip(".").lower()
+    info["extension"] = ext if ext in _EXTENSIONES else "csv"
+    grid = PB.read_grid(csv_path, info["delimitador"], info["encoding"])
+    # La limpieza de acentos y diéresis se aplica ya en el alta: el perfil se
+    # arma sobre el texto limpio, igual que lo va a ver DataStore al abrirlo.
+    limpiadas = limpiar_grid(grid)
 
     wizard_id = str(uuid.uuid4())
     _SESIONES[wizard_id] = {
         "creado": time.time(), "modo": "alta", "csv_path": csv_path,
         "info": info, "grid": grid, "profile_id_existente": None,
+        "celdas_limpiadas": limpiadas,
     }
     return _resumen_inicio(wizard_id)
 
@@ -71,13 +81,18 @@ def iniciar_edicion(machine_id: str) -> dict[str, Any]:
     if not os.path.exists(csv_path):
         raise WizardError(f"La máquina '{machine_id}' todavía no tiene datos cargados")
     info = PB.sniff_csv(csv_path)
-    grid = PB.read_grid(csv_path, info["delimitador"])
+    info["encoding"] = profile.encoding
+    info["extension"] = profile.extension
+    grid = PB.read_grid(csv_path, info["delimitador"], profile.encoding)
+    limpiadas = limpiar_grid(grid) if profile.limpieza_acentos else 0
+    if profile.id_auto:
+        DataStore._extraer_ids(grid, profile)  # noqa: SLF001 — la fila de IDs no es parte del archivo
 
     wizard_id = str(uuid.uuid4())
     _SESIONES[wizard_id] = {
         "creado": time.time(), "modo": "edicion", "csv_path": csv_path,
         "info": info, "grid": grid, "profile_id_existente": machine_id,
-        "perfil_existente": profile,
+        "perfil_existente": profile, "celdas_limpiadas": limpiadas,
     }
     return _resumen_inicio(wizard_id)
 
@@ -89,6 +104,7 @@ def _resumen_inicio(wizard_id: str) -> dict[str, Any]:
         "wizard_id": wizard_id,
         "modo": s["modo"],
         "info": s["info"],
+        "celdas_limpiadas": s.get("celdas_limpiadas", 0),
         "n_filas": len(grid),
         "n_columnas": max((len(r) for r in grid), default=0),
         "grid_preview": grid[:12],
@@ -101,12 +117,19 @@ def clasificar(wizard_id: str, orientacion: str, primera_col: int = 1) -> dict[s
     s["orientacion"] = orientacion
     s["primera_col"] = primera_col
 
+    # None = el archivo no trae una fila/columna que identifique a cada
+    # registro: se va a usar un ID automático.
     if orientacion == "columnas":
         n_ejes = len(grid)
-        clave_sugerida = PB.suggest_clave_row(grid, primera_col)
+        clave_sugerida = PB.suggest_clave_row(grid, primera_col, aproximada=False)
     else:
         n_ejes = max((len(r) for r in grid), default=0)
-        clave_sugerida = 0  # en orientación filas, la 1ra columna suele ser la clave
+        columnas = [[(r[j] if j < len(r) else "") for r in grid] for j in range(n_ejes)]
+        clave_sugerida = PB.suggest_clave_row(columnas, 1, aproximada=False)
+    previo = s.get("perfil_existente")
+    if previo is not None:
+        c = previo.campo_clave()
+        clave_sugerida = None if c.sintetica else (c.fila if orientacion == "columnas" else c.columna)
 
     filas: list[dict[str, Any]] = []
     for idx in range(n_ejes):
@@ -142,7 +165,8 @@ def clasificar(wizard_id: str, orientacion: str, primera_col: int = 1) -> dict[s
 
 
 def construir_perfil(wizard_id: str, machine_id: str, nombre: str, descripcion: str,
-                      clave_idx: int, filas: list[dict[str, Any]]) -> dict[str, Any]:
+                      clave_idx: int | None, filas: list[dict[str, Any]]) -> dict[str, Any]:
+    """`clave_idx=None`: el archivo no tiene clave y se usa un ID automático."""
     s = _sesion(wizard_id)
     grid = s["grid"]
     orientacion = s["orientacion"]
@@ -177,7 +201,7 @@ def construir_perfil(wizard_id: str, machine_id: str, nombre: str, descripcion: 
             row_kinds[idx] = f["kind_override"]
 
     if (orientacion == "columnas" and not s.get("perfil_existente")
-            and 0 <= clave_idx < len(grid)):
+            and clave_idx is not None and 0 <= clave_idx < len(grid)):
         claves = [c.strip() for c in grid[clave_idx][primera_col:] if c.strip()]
         if len(set(claves)) < 2:
             sugerida = PB.suggest_clave_row(grid, primera_col)
@@ -192,7 +216,10 @@ def construir_perfil(wizard_id: str, machine_id: str, nombre: str, descripcion: 
                 f"identificar a cada registro con un valor propio.{pista}"
             )
 
-    features = s.get("perfil_existente").features if s.get("perfil_existente") else None
+    if s.get("perfil_existente"):
+        features = s["perfil_existente"].features
+    else:
+        features = {"limpieza_texto": {"acentos": True}}
     try:
         if orientacion == "columnas":
             perfil = PB.build_profile_columnas(
@@ -224,7 +251,14 @@ def validar(wizard_id: str) -> dict[str, Any]:
         store = DataStore.load(s["csv_path"], prof)
         with open(s["csv_path"], "rb") as f:
             original = f.read()
-        regenerado = store.to_text().encode(prof.encoding)
+        codec = "utf-8-sig" if prof.bom else prof.encoding
+        # Lo esperado es el original ya limpio: el sistema saca acentos y
+        # diéresis a propósito, lo único que debe cambiar respecto del archivo.
+        texto_esperado = original.decode(codec)
+        if prof.limpieza_acentos:
+            texto_esperado = quitar_acentos(texto_esperado)
+        original = texto_esperado.encode(codec)
+        regenerado = store.to_text().encode(codec)
         ok = original == regenerado
         primer_diff = None
         if not ok:
@@ -243,14 +277,41 @@ def validar(wizard_id: str) -> dict[str, Any]:
             "primer_diff_byte": primer_diff,
             "orig_len": len(original),
             "regen_len": len(regenerado),
+            "celdas_limpiadas": store.celdas_limpiadas,
+            "id_automatico": prof.id_auto,
+            "advertencias": _advertencias(prof, store),
         }
     except (ValueError, ProfileError, OSError, UnicodeDecodeError) as e:
         resultado = {
             "ok": False, "n_registros": 0, "n_visibles": 0, "n_ocultos": 0,
             "error_msg": str(e), "primer_diff_byte": None, "orig_len": None, "regen_len": None,
+            "celdas_limpiadas": 0, "id_automatico": False, "advertencias": [],
         }
     s["ultima_validacion_ok"] = resultado["ok"]
     return resultado
+
+
+def _advertencias(prof: Profile, store: DataStore) -> list[str]:
+    """Avisos que no frenan el alta: el ingeniero los revisa después con la
+    función de duplicados / salud de datos del sistema."""
+    avisos: list[str] = []
+    if store.celdas_limpiadas:
+        avisos.append(f"Se sacaron acentos y diéresis en {store.celdas_limpiadas} celda(s).")
+    if prof.id_auto:
+        avisos.append("El archivo no trae una clave: cada registro recibe un ID "
+                      "automático (columna «ID»), que no se exporta a la máquina.")
+        return avisos
+    clave = prof.campo_clave().nombre_interno
+    claves = [str(r[clave]).strip() for r in store.records]
+    vacias = sum(1 for k in claves if not k)
+    if vacias:
+        avisos.append(f"{vacias} registro(s) tienen la clave vacía.")
+    repetidas = {k for k, n in collections.Counter(claves).items() if k and n > 1}
+    if repetidas:
+        ejemplos = ", ".join(sorted(repetidas)[:3])
+        avisos.append(f"Hay {len(repetidas)} clave(s) repetida(s) (por ejemplo {ejemplos}): "
+                      "revisalas con la función de duplicados.")
+    return avisos
 
 
 def confirmar(wizard_id: str) -> dict[str, Any]:
