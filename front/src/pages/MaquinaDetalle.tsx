@@ -539,6 +539,31 @@ function VistaMaquina({ id }: { id: string }) {
     }
   };
 
+  // -- eliminar máquina -------------------------------------------------------
+  // Mismo flujo que el selector de máquinas: confirmación tipeando el nombre.
+  const onEliminarMaquina = async () => {
+    if (!detalle) return;
+    try {
+      const ok = await confirmar({
+        titulo: "Eliminar máquina",
+        mensaje:
+          `¿Eliminar permanentemente la máquina «${detalle.nombre}»?\n\n` +
+          "Se borrarán el perfil y todos sus datos y metadatos.\n\n" +
+          "Esta acción no se puede deshacer.",
+        peligro: true,
+        textoOk: "Confirmar eliminación",
+        textoCancelar: "Cancelar",
+        exigirTexto: detalle.nombre,
+      });
+      if (!ok) return;
+      await api.eliminarMaquina(id, detalle.nombre);
+      toast.mostrar(`Máquina «${detalle.nombre}» eliminada.`, "aviso");
+      navigate("/");
+    } catch (e) {
+      await avisar({ titulo: "No se pudo eliminar", mensaje: String(e), tipo: "error" });
+    }
+  };
+
   // -- atajos ---------------------------------------------------------------
   useAtajos(
     {
@@ -607,6 +632,14 @@ function VistaMaquina({ id }: { id: string }) {
             tooltip="Ver y elegir entre los documentos de configuración de todas las máquinas"
           >
             🗂 Máquinas
+          </Boton>
+          <Boton
+            tipo="danger"
+            chico
+            onClick={() => void onEliminarMaquina()}
+            tooltip="Eliminar esta máquina y todos sus datos"
+          >
+            🗑 Eliminar máquina
           </Boton>
         </div>
       </header>
