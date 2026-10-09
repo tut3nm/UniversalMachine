@@ -150,6 +150,9 @@ def test_sin_config_de_duplicados_no_hay_grupos(tmp_path, monkeypatch):
 
 
 # -- importación (B6) --------------------------------------------------------
+BUSQUEDA = {"campo": "code", "columna": "Codigo"}
+
+
 def _csv_import(contenido: str) -> bytes:
     return contenido.encode("utf-8")
 
@@ -160,7 +163,9 @@ def test_iniciar_importacion_csv_devuelve_headers_y_preview(maquina):
     r = imp_svc.iniciar(MACHINE_ID, "cambios.csv", contenido)
     assert r["hojas"] == ["CSV"]
     assert r["headers"] == ["Codigo", "Gramos", "Nombre"]
-    assert r["sugerencia"]["code"] == "Codigo"
+    assert r["sugerencia_busqueda"] == {"campo": "code", "columna": "Codigo"}
+    assert r["sugerencia"]["grams"] == "Gramos"
+    assert "code" not in r["sugerencia"]
     assert len(r["preview"]) == 2
 
 
@@ -169,50 +174,63 @@ def test_iniciar_con_extension_no_soportada_se_rechaza(maquina):
         imp_svc.iniciar(MACHINE_ID, "cambios.txt", b"nada")
 
 
-def test_mapear_exige_la_columna_clave(maquina):
-    contenido = _csv_import("Gramos,Nombre\r\n999,Actualizado\r\n")
-    r = imp_svc.iniciar(MACHINE_ID, "cambios.csv", contenido)
+def test_mapear_exige_la_clave_de_busqueda(maquina):
+    r = imp_svc.iniciar(MACHINE_ID, "cambios.csv", _csv_import("Codigo,Gramos\r\nC000,9\r\n"))
     with pytest.raises(imp_svc.ImportacionError):
-        imp_svc.mapear(r["import_id"], {"grams": "Gramos"})
+        imp_svc.mapear(r["import_id"], None, {"grams": "Gramos"})
+    with pytest.raises(imp_svc.ImportacionError):
+        imp_svc.mapear(r["import_id"], {"campo": "code"}, {"grams": "Gramos"})
 
 
-def test_mapear_exige_al_menos_un_dato_ademas_de_la_clave(maquina):
-    contenido = _csv_import("Codigo,Gramos\r\nC000,999\r\n")
-    r = imp_svc.iniciar(MACHINE_ID, "cambios.csv", contenido)
+def test_mapear_exige_al_menos_un_dato(maquina):
+    r = imp_svc.iniciar(MACHINE_ID, "cambios.csv", _csv_import("Codigo,Gramos\r\nC000,9\r\n"))
     with pytest.raises(imp_svc.ImportacionError):
-        imp_svc.mapear(r["import_id"], {"code": "Codigo"})
+        imp_svc.mapear(r["import_id"], BUSQUEDA, {})
 
 
 def test_mapear_rechaza_columnas_repetidas(maquina):
-    contenido = _csv_import("Codigo,Gramos\r\nC000,999\r\n")
-    r = imp_svc.iniciar(MACHINE_ID, "cambios.csv", contenido)
+    r = imp_svc.iniciar(MACHINE_ID, "cambios.csv", _csv_import("Codigo,Gramos\r\nC000,9\r\n"))
     with pytest.raises(imp_svc.ImportacionError):
-        imp_svc.mapear(r["import_id"], {"code": "Codigo", "grams": "Codigo"})
+        imp_svc.mapear(r["import_id"], BUSQUEDA, {"grams": "Codigo"})
 
 
-def test_mapear_calcula_diffs_nuevos_y_obsoletos(maquina):
+def test_mapear_no_permite_actualizar_la_clave_de_busqueda(maquina):
+    r = imp_svc.iniciar(MACHINE_ID, "cambios.csv", _csv_import("Codigo,Gramos,Nombre\r\nC000,9,x\r\n"))
+    with pytest.raises(imp_svc.ImportacionError):
+        imp_svc.mapear(r["import_id"], BUSQUEDA, {"code": "Nombre"})
+
+
+def test_mapear_calcula_diffs_sin_coincidencia_y_obsoletos(maquina):
     contenido = _csv_import(
         "Codigo,Gramos,Nombre\r\n"
         "C000,999,Actualizado\r\n"   # difiere de lo que hay (0)
         "C001,10,Pieza 1\r\n"        # igual a lo que hay -> sin cambios
-        "NUEVO,5,Pieza nueva\r\n"    # no está en el catálogo -> nuevo
+        "NUEVO,5,Pieza nueva\r\n"    # no está en el catálogo -> solo aviso
         # C002, C003, C004 no aparecen -> obsoletos
     )
     r = imp_svc.iniciar(MACHINE_ID, "cambios.csv", contenido)
-    resultado = imp_svc.mapear(
-        r["import_id"], {"code": "Codigo", "grams": "Gramos", "nombre": "Nombre"})
+    resultado = imp_svc.mapear(r["import_id"], BUSQUEDA, {"grams": "Gramos", "nombre": "Nombre"})
 
-    assert [d["code"] for d in resultado["diffs"]] == ["C000"]
+    assert [d["id"] for d in resultado["diffs"]] == ["C000"]
     assert resultado["diffs"][0]["errores"] == []
-    assert [d["code"] for d in resultado["nuevos"]] == ["NUEVO"]
-    assert {d["code"] for d in resultado["obsoletos"]} == {"C002", "C003", "C004"}
+    assert resultado["sin_coincidencia"] == [{"codigo": "NUEVO"}]
+    assert {d["id"] for d in resultado["obsoletos"]} == {"C002", "C003", "C004"}
     assert resultado["sin_cambios"] == 1
+
+
+def test_mapear_detecta_conflicto_por_codigo_repetido(maquina):
+    r = imp_svc.iniciar(MACHINE_ID, "cambios.csv",
+                        _csv_import("Codigo,Gramos\r\nC000,999\r\nC000,5\r\n"))
+    resultado = imp_svc.mapear(r["import_id"], BUSQUEDA, {"grams": "Gramos"})
+    assert resultado["diffs"] == []
+    assert resultado["conflictos"] == [
+        {"codigo": "C000", "motivo": "aparece 2 veces en el archivo"}]
 
 
 def test_mapear_detecta_valores_fuera_de_rango(maquina):
     contenido = _csv_import("Codigo,Gramos,Nombre\r\nC000,99999,x\r\n")
     r = imp_svc.iniciar(MACHINE_ID, "cambios.csv", contenido)
-    resultado = imp_svc.mapear(r["import_id"], {"code": "Codigo", "grams": "Gramos"})
+    resultado = imp_svc.mapear(r["import_id"], BUSQUEDA, {"grams": "Gramos"})
     assert len(resultado["diffs"]) == 1
     assert resultado["diffs"][0]["errores"] != []
 
@@ -223,81 +241,73 @@ def test_aplicar_hace_un_solo_backup_y_un_evento_por_registro(maquina):
         "C000,999,Actualizado\r\n"
         "NUEVO,5,Pieza nueva\r\n")
     r = imp_svc.iniciar(MACHINE_ID, "cambios.csv", contenido)
-    resultado = imp_svc.mapear(
-        r["import_id"], {"code": "Codigo", "grams": "Gramos", "nombre": "Nombre"})
-    diffs_codes = [d["code"] for d in resultado["diffs"]]
-    nuevos_codes = [d["code"] for d in resultado["nuevos"]]
-    obsoletos_codes = [d["code"] for d in resultado["obsoletos"]]
+    resultado = imp_svc.mapear(r["import_id"], BUSQUEDA, {"grams": "Gramos", "nombre": "Nombre"})
+    diffs_ids = [d["id"] for d in resultado["diffs"]]
+    obsoletos_ids = [d["id"] for d in resultado["obsoletos"]]
 
-    aplicado = imp_svc.aplicar(r["import_id"], diffs_codes, nuevos_codes, obsoletos_codes, None)
+    aplicado = imp_svc.aplicar(r["import_id"], diffs_ids, obsoletos_ids, None)
     assert aplicado["modificados"] == 1
-    assert aplicado["nuevos"] == 1
     assert aplicado["eliminados"] == 4  # C001, C002, C003, C004: no aparecen en el Excel
+    assert aplicado["omitidos"] == 0
 
     bdir = os.path.join(maquina, "datos", MACHINE_ID, "backups")
     assert sum(1 for n in os.listdir(bdir) if n.endswith(".csv")) == 1
 
     eventos = _eventos(maquina)
-    assert len(eventos) == 6  # 1 modificación + 1 alta + 4 bajas
+    assert len(eventos) == 5  # 1 modificación + 4 bajas; nunca hay altas
     assert all(e["origen"] == "importacion" for e in eventos)
 
+    # "NUEVO" no existe en el catálogo y no se crea: solo se avisa.
     registros = svc.listar_registros(MACHINE_ID)["registros"]
-    assert {x["code"] for x in registros} == {"C000", "NUEVO"}
+    assert {x["code"] for x in registros} == {"C000"}
     assert next(x for x in registros if x["code"] == "C000")["grams"] == 999
 
 
 def test_aplicar_solo_lo_seleccionado(maquina):
-    contenido = _csv_import(
-        "Codigo,Gramos,Nombre\r\nC000,999,x\r\nNUEVO,5,y\r\n")
+    contenido = _csv_import("Codigo,Gramos,Nombre\r\nC000,999,x\r\nNUEVO,5,y\r\n")
     r = imp_svc.iniciar(MACHINE_ID, "cambios.csv", contenido)
-    resultado = imp_svc.mapear(r["import_id"], {"code": "Codigo", "grams": "Gramos"})
-    diffs_codes = [d["code"] for d in resultado["diffs"]]
+    resultado = imp_svc.mapear(r["import_id"], BUSQUEDA, {"grams": "Gramos"})
+    diffs_ids = [d["id"] for d in resultado["diffs"]]
 
-    # Solo se aplica la modificación; ni el nuevo código ni los obsoletos.
-    aplicado = imp_svc.aplicar(r["import_id"], diffs_codes, [], [], None)
+    # Solo se aplica la modificación; ni las bajas.
+    aplicado = imp_svc.aplicar(r["import_id"], diffs_ids, [], None)
     assert aplicado["modificados"] == 1
-    assert aplicado["nuevos"] == 0
     assert aplicado["eliminados"] == 0
     registros = {x["code"] for x in svc.listar_registros(MACHINE_ID)["registros"]}
     assert registros == {"C000", "C001", "C002", "C003", "C004"}
 
 
 def test_aplicar_sin_nada_seleccionado_se_rechaza(maquina):
-    contenido = _csv_import("Codigo,Gramos\r\nC000,999\r\n")
-    r = imp_svc.iniciar(MACHINE_ID, "cambios.csv", contenido)
-    imp_svc.mapear(r["import_id"], {"code": "Codigo", "grams": "Gramos"})
+    r = imp_svc.iniciar(MACHINE_ID, "cambios.csv", _csv_import("Codigo,Gramos\r\nC000,999\r\n"))
+    imp_svc.mapear(r["import_id"], BUSQUEDA, {"grams": "Gramos"})
     with pytest.raises(imp_svc.ImportacionError):
-        imp_svc.aplicar(r["import_id"], [], [], [], None)
+        imp_svc.aplicar(r["import_id"], [], [], None)
 
 
 def test_aplicar_respeta_el_hash_esperado(maquina):
-    contenido = _csv_import("Codigo,Gramos\r\nC000,999\r\n")
-    r = imp_svc.iniciar(MACHINE_ID, "cambios.csv", contenido)
-    resultado = imp_svc.mapear(r["import_id"], {"code": "Codigo", "grams": "Gramos"})
-    diffs_codes = [d["code"] for d in resultado["diffs"]]
+    r = imp_svc.iniciar(MACHINE_ID, "cambios.csv", _csv_import("Codigo,Gramos\r\nC000,999\r\n"))
+    resultado = imp_svc.mapear(r["import_id"], BUSQUEDA, {"grams": "Gramos"})
+    diffs_ids = [d["id"] for d in resultado["diffs"]]
 
     with pytest.raises(svc.ConflictoEdicionExterna):
-        imp_svc.aplicar(r["import_id"], diffs_codes, [], [], "hash-viejo-incorrecto")
+        imp_svc.aplicar(r["import_id"], diffs_ids, [], "hash-viejo-incorrecto")
 
 
 def test_aplicar_borra_la_sesion(maquina):
-    contenido = _csv_import("Codigo,Gramos\r\nC000,999\r\n")
-    r = imp_svc.iniciar(MACHINE_ID, "cambios.csv", contenido)
-    resultado = imp_svc.mapear(r["import_id"], {"code": "Codigo", "grams": "Gramos"})
-    diffs_codes = [d["code"] for d in resultado["diffs"]]
-    imp_svc.aplicar(r["import_id"], diffs_codes, [], [], None)
+    r = imp_svc.iniciar(MACHINE_ID, "cambios.csv", _csv_import("Codigo,Gramos\r\nC000,999\r\n"))
+    resultado = imp_svc.mapear(r["import_id"], BUSQUEDA, {"grams": "Gramos"})
+    diffs_ids = [d["id"] for d in resultado["diffs"]]
+    imp_svc.aplicar(r["import_id"], diffs_ids, [], None)
     with pytest.raises(KeyError):
-        imp_svc.mapear(r["import_id"], {"code": "Codigo"})
+        imp_svc.mapear(r["import_id"], BUSQUEDA, {"grams": "Gramos"})
 
 
 def test_mapeo_confirmado_se_recuerda_para_la_proxima_importacion(maquina):
-    contenido = _csv_import("Cod,Gr\r\nC000,999\r\n")
-    r = imp_svc.iniciar(MACHINE_ID, "cambios.csv", contenido)
-    imp_svc.mapear(r["import_id"], {"code": "Cod", "grams": "Gr"})
+    r = imp_svc.iniciar(MACHINE_ID, "cambios.csv", _csv_import("Cod,Gr\r\nC000,999\r\n"))
+    imp_svc.mapear(r["import_id"], {"campo": "code", "columna": "Cod"}, {"grams": "Gr"})
 
-    # Un archivo nuevo con las mismas columnas: la sugerencia usa el mapeo
-    # recordado, aunque el nombre no coincida con el título del perfil.
-    contenido2 = _csv_import("Cod,Gr\r\nC001,5\r\n")
-    r2 = imp_svc.iniciar(MACHINE_ID, "cambios2.csv", contenido2)
-    assert r2["sugerencia"]["code"] == "Cod"
+    # Un archivo nuevo con las mismas columnas: la sugerencia usa la clave y
+    # el mapeo recordados, aunque el nombre no coincida con el título del perfil.
+    r2 = imp_svc.iniciar(MACHINE_ID, "cambios2.csv", _csv_import("Cod,Gr\r\nC001,5\r\n"))
+    assert r2["sugerencia_busqueda"] == {"campo": "code", "columna": "Cod"}
     assert r2["sugerencia"]["grams"] == "Gr"

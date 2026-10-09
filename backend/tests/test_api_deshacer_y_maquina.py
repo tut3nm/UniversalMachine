@@ -200,18 +200,22 @@ def test_deshacer_una_edicion_en_masa_revierte_todos_los_registros(maquina):
 
 
 def test_deshacer_una_importacion_revierte_todos_los_cambios_de_una(maquina):
+    # Fixture con C000, C001 y C002. Modificación de C000 + bajas de C001 y C002.
+    # "NUEVO" solo se avisa, no se crea.
     contenido = b"Codigo,Gramos,Nombre\r\nC000,999,x\r\nNUEVO,5,y\r\n"
     r = imp_svc.iniciar(MACHINE_ID, "cambios.csv", contenido)
-    resultado = imp_svc.mapear(r["import_id"], {"code": "Codigo", "grams": "Gramos"})
-    diffs_codes = [d["code"] for d in resultado["diffs"]]
-    nuevos_codes = [d["code"] for d in resultado["nuevos"]]
-    imp_svc.aplicar(r["import_id"], diffs_codes, nuevos_codes, [], None)
-    assert "NUEVO" in _codigos()
+    resultado = imp_svc.mapear(r["import_id"], {"campo": "code", "columna": "Codigo"},
+                               {"grams": "Gramos"})
+    diffs_ids = [d["id"] for d in resultado["diffs"]]
+    obsoletos_ids = [d["id"] for d in resultado["obsoletos"]]
+    imp_svc.aplicar(r["import_id"], diffs_ids, obsoletos_ids, None)
+    assert _codigos() == {"C000"}
     assert svc.listar_registros(MACHINE_ID)["registros"][0]["grams"] == 999
 
     svc.deshacer(MACHINE_ID)
-    assert "NUEVO" not in _codigos()
-    assert svc.listar_registros(MACHINE_ID)["registros"][0]["grams"] == 0
+    assert _codigos() == {"C000", "C001", "C002"}
+    assert next(x for x in svc.listar_registros(MACHINE_ID)["registros"]
+                if x["code"] == "C000")["grams"] == 0
 
 
 # -- límite de 50 comandos ------------------------------------------------------

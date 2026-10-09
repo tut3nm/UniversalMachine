@@ -20,6 +20,9 @@ Planes de diseño e implementación, en la raíz:
 - [`PLAN_MEMORIA_FORMATOS.md`](PLAN_MEMORIA_FORMATOS.md) — memoria
   compartida de formatos: explicar un tipo de archivo una vez y reconocerlo
   solo después.
+- [`docs/PLAN_IMPORTACION_CLAVE_BUSQUEDA.md`](docs/PLAN_IMPORTACION_CLAVE_BUSQUEDA.md)
+  — importación desde Excel con clave de búsqueda separada de la PK y
+  mapeo de datos a actualizar.
 
 Cada subcarpeta (`front/`, `backend/`) es autocontenida (su propio
 `.gitignore`, dependencias y tests).

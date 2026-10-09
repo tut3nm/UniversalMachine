@@ -640,6 +640,11 @@ con el contenido esperado.
 
 ### 7.5 Fase 5 — entregado (2026-09-17)
 
+> **Actualizado (2026-10-09):** el mapeo de la importación pasó a dos secciones
+> (clave de búsqueda + datos a actualizar), sin altas desde el Excel, con conflictos
+> por código repetido. Ver [PLAN_IMPORTACION_CLAVE_BUSQUEDA.md](PLAN_IMPORTACION_CLAVE_BUSQUEDA.md).
+> Lo que sigue describe el flujo anterior.
+
 **Backend** — nada faltaba en `core/` (`excel_import.py`, `importacion.py`,
 `import_mapeos.py`, `datastore.find_similar_groups`, `metadata.Sidecar` ya
 estaban del trabajo previo del escritorio); todo el trabajo fue de
