@@ -331,32 +331,32 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ import_id: importId, hoja }),
     }),
-  importMapear: (id: string, importId: string, mapeo: Record<string, string>) =>
+  importMapear: (
+    id: string,
+    importId: string,
+    busqueda: { campo: string; columna: string },
+    mapeo: Record<string, string>,
+  ) =>
     req<ImportMapeoResultado>(`/api/maquinas/${id}/import/mapping`, {
       method: "POST",
-      body: JSON.stringify({ import_id: importId, mapeo }),
+      body: JSON.stringify({ import_id: importId, busqueda, mapeo }),
     }),
   importAplicar: (
     id: string,
     importId: string,
     diffs: string[],
-    nuevos: string[],
     obsoletos: string[],
     hash?: string | null,
   ) =>
-    req<{ hash: string; modificados: number; nuevos: number; eliminados: number }>(
-      `/api/maquinas/${id}/import/apply`,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          import_id: importId,
-          diffs,
-          nuevos,
-          obsoletos,
-          hash_esperado: hash ?? null,
-        }),
-      },
-    ),
+    req<ImportAplicarResultado>(`/api/maquinas/${id}/import/apply`, {
+      method: "POST",
+      body: JSON.stringify({
+        import_id: importId,
+        diffs,
+        obsoletos,
+        hash_esperado: hash ?? null,
+      }),
+    }),
 
   // -- wizard de alta/edición de máquina (4 pasos) -----------------------------
   wizardIniciarAlta: async (archivo: File): Promise<WizardInicio> => {
@@ -778,8 +778,10 @@ export interface ErrorValidacionApi {
 export interface ImportHoja {
   hoja: string;
   headers: string[];
-  /** {nombre_interno: encabezado sugerido, o null si no hay sugerencia}. */
+  /** Datos a actualizar: {nombre_interno: encabezado sugerido, o null}. */
   sugerencia: Record<string, string | null>;
+  /** Clave de búsqueda sugerida: campo del sistema + columna del archivo. */
+  sugerencia_busqueda: { campo: string | null; columna: string | null };
   preview: unknown[][];
 }
 
@@ -790,30 +792,42 @@ export interface ImportInicio extends ImportHoja {
 
 export interface ImportDiffRegistro {
   idx: number;
-  code: string;
+  /** PK del registro: única, identifica la fila al aplicar. */
+  id: string;
+  /** Valor de la clave de búsqueda (lo que el usuario reconoce). */
+  busqueda: string;
   old: Record<string, unknown>;
   new: Record<string, unknown>;
   errores: ErrorValidacionApi[];
   redondeos: string[];
 }
 
-export interface ImportNuevoRegistro {
-  code: string;
-  valores: Record<string, unknown>;
-  errores: ErrorValidacionApi[];
-  redondeos: string[];
-}
-
 export interface ImportObsoleto {
   idx: number;
-  code: string;
+  id: string;
+  busqueda: string;
+}
+
+export interface ImportConflicto {
+  codigo: string;
+  motivo: string;
 }
 
 export interface ImportMapeoResultado {
   diffs: ImportDiffRegistro[];
-  nuevos: ImportNuevoRegistro[];
+  conflictos: ImportConflicto[];
+  /** Códigos del archivo que no están en el sistema: solo aviso. */
+  sin_coincidencia: { codigo: string }[];
   obsoletos: ImportObsoleto[];
   sin_cambios: number;
+  filas_sin_clave: number;
+}
+
+export interface ImportAplicarResultado {
+  hash: string;
+  modificados: number;
+  eliminados: number;
+  omitidos: number;
 }
 
 // -- deshacer / rehacer (B3) -----------------------------------------------------

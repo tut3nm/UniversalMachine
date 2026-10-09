@@ -37,13 +37,16 @@ def hoja(machine_id: str, body: HojaIn):
 
 class MappingIn(BaseModel):
     import_id: str
-    mapeo: dict[str, str]
+    # Sección 1: {"campo": nombre_interno, "columna": encabezado del archivo}.
+    busqueda: dict[str, str] | None = None
+    # Sección 2: {nombre_interno: encabezado del archivo} de los datos a actualizar.
+    mapeo: dict[str, str] = {}
 
 
 @router.post("/mapping")
 def mapping(machine_id: str, body: MappingIn):
     try:
-        return svc.mapear(body.import_id, body.mapeo)
+        return svc.mapear(body.import_id, body.busqueda, body.mapeo)
     except KeyError as e:
         raise HTTPException(404, str(e))
     except svc.ImportacionError as e:
@@ -53,7 +56,6 @@ def mapping(machine_id: str, body: MappingIn):
 class ApplyIn(BaseModel):
     import_id: str
     diffs: list[str] = []
-    nuevos: list[str] = []
     obsoletos: list[str] = []
     hash_esperado: str | None = None
 
@@ -61,8 +63,7 @@ class ApplyIn(BaseModel):
 @router.post("/apply")
 def apply(machine_id: str, body: ApplyIn):
     try:
-        return svc.aplicar(body.import_id, body.diffs, body.nuevos, body.obsoletos,
-                           body.hash_esperado)
+        return svc.aplicar(body.import_id, body.diffs, body.obsoletos, body.hash_esperado)
     except KeyError as e:
         raise HTTPException(404, str(e))
     except svc.ImportacionError as e:
