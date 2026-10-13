@@ -53,17 +53,38 @@ def mapping(machine_id: str, body: MappingIn):
         raise HTTPException(400, str(e))
 
 
+class MappingCargaIn(BaseModel):
+    import_id: str
+    # Claves de búsqueda (1 o 2): [{"campo": nombre_interno, "columna": encabezado}].
+    claves: list[dict[str, str]]
+    # Datos que no son clave: {nombre_interno: encabezado}.
+    mapeo: dict[str, str] = {}
+
+
+@router.post("/mapping-carga")
+def mapping_carga(machine_id: str, body: MappingCargaIn):
+    try:
+        return svc.mapear_carga(body.import_id, body.claves, body.mapeo)
+    except KeyError as e:
+        raise HTTPException(404, str(e))
+    except svc.ImportacionError as e:
+        raise HTTPException(400, str(e))
+
+
 class ApplyIn(BaseModel):
     import_id: str
     diffs: list[str] = []
     obsoletos: list[str] = []
+    # Solo carga masiva: ids de las altas (registros nuevos) marcadas.
+    altas: list[str] = []
     hash_esperado: str | None = None
 
 
 @router.post("/apply")
 def apply(machine_id: str, body: ApplyIn):
     try:
-        return svc.aplicar(body.import_id, body.diffs, body.obsoletos, body.hash_esperado)
+        return svc.aplicar(body.import_id, body.diffs, body.obsoletos, body.hash_esperado,
+                           body.altas)
     except KeyError as e:
         raise HTTPException(404, str(e))
     except svc.ImportacionError as e:

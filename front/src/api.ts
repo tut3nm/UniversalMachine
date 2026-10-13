@@ -341,12 +341,23 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ import_id: importId, busqueda, mapeo }),
     }),
+  importMapearCarga: (
+    id: string,
+    importId: string,
+    claves: { campo: string; columna: string }[],
+    mapeo: Record<string, string>,
+  ) =>
+    req<ImportMapeoResultado>(`/api/maquinas/${id}/import/mapping-carga`, {
+      method: "POST",
+      body: JSON.stringify({ import_id: importId, claves, mapeo }),
+    }),
   importAplicar: (
     id: string,
     importId: string,
     diffs: string[],
     obsoletos: string[],
     hash?: string | null,
+    altas: string[] = [],
   ) =>
     req<ImportAplicarResultado>(`/api/maquinas/${id}/import/apply`, {
       method: "POST",
@@ -354,6 +365,7 @@ export const api = {
         import_id: importId,
         diffs,
         obsoletos,
+        altas,
         hash_esperado: hash ?? null,
       }),
     }),
@@ -813,10 +825,21 @@ export interface ImportConflicto {
   motivo: string;
 }
 
+/** Carga masiva: fila del archivo que se da de alta como registro nuevo. */
+export interface ImportAlta {
+  /** Clave compuesta del archivo (única): identifica la fila al aplicar. */
+  id: string;
+  busqueda: string;
+  new: Record<string, unknown>;
+  errores: ErrorValidacionApi[];
+}
+
 export interface ImportMapeoResultado {
   diffs: ImportDiffRegistro[];
+  /** Solo carga masiva. */
+  altas: ImportAlta[];
   conflictos: ImportConflicto[];
-  /** Códigos del archivo que no están en el sistema: solo aviso. */
+  /** Códigos del archivo que no están en el sistema: solo aviso (actualización). */
   sin_coincidencia: { codigo: string }[];
   obsoletos: ImportObsoleto[];
   sin_cambios: number;
@@ -826,6 +849,7 @@ export interface ImportMapeoResultado {
 export interface ImportAplicarResultado {
   hash: string;
   modificados: number;
+  altas: number;
   eliminados: number;
   omitidos: number;
 }

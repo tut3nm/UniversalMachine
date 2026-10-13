@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   api,
   type Campo,
+  type ImportAlta,
   type ImportAplicarResultado,
   type ImportConflicto,
   type ImportDiffRegistro,
@@ -13,20 +14,26 @@ import { Boton, Modal, useDialogos } from "../ui";
 const SKIP = "";
 /** Clave interna para la columna de búsqueda en el mapa de columnas usadas. */
 const BUSQUEDA = "__busqueda__";
+/** Prefijo para las claves de la carga masiva (`__clave0__`, `__clave1__`). */
+const CLAVE = "__clave__";
 
-type Fase = "elegir_archivo" | "hoja" | "mapeo" | "diff";
+type Fase = "modo" | "elegir_archivo" | "hoja" | "mapeo" | "diff";
+type Modo = "carga" | "actualizacion";
+type Clave = { campo: string; columna: string };
 
 /**
- * Importar cambios desde un Excel o CSV en dos pasos de mapeo:
+ * Importar datos desde un Excel o CSV. Dos modos:
  *
- * 1. Clave de búsqueda: un campo del sistema (sin ID) y la columna del
- *    archivo que lo identifica. Cada fila del archivo se busca por este valor.
- * 2. Datos a actualizar: columnas del archivo → parámetros del sistema. Si la
- *    celda del archivo está vacía, el dato actual no se toca.
+ * - Actualización masiva: cambia registros que ya existen. Cada fila se busca
+ *   por una clave (un campo del sistema) y las celdas vacías no tocan el dato
+ *   actual. Los códigos que no están en el sistema solo se avisan.
+ * - Carga masiva: crea un registro por fila con ID automático. Hasta dos
+ *   campos forman la clave (p. ej. amortiguador y número de sellado): si ya
+ *   existe un registro con esas claves se modifica; si no, se da de alta. Las
+ *   celdas vacías quedan en 0 (numérico) o Null (texto).
  *
- * Los códigos del archivo que no están en el sistema solo se avisan: no se
- * crean registros. Los códigos repetidos son conflictos y no se importan.
- * Plan: docs/PLAN_IMPORTACION_CLAVE_BUSQUEDA.md.
+ * Los códigos repetidos son conflictos y no se importan.
+ * Planes: docs/PLAN_IMPORTACION_CLAVE_BUSQUEDA.md y docs/PLAN_CARGA_MASIVA.md.
  */
 export default function ImportarDialog({
   machineId,
@@ -43,7 +50,8 @@ export default function ImportarDialog({
   onCerrar: () => void;
 }) {
   const { avisar, confirmar } = useDialogos();
-  const [fase, setFase] = useState<Fase>("elegir_archivo");
+  const [fase, setFase] = useState<Fase>("modo");
+  const [modo, setModo] = useState<Modo>("actualizacion");
   const [archivo, setArchivo] = useState<File | null>(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,23 +63,42 @@ export default function ImportarDialog({
   const [preview, setPreview] = useState<unknown[][]>([]);
   const [busqCampo, setBusqCampo] = useState<string>(SKIP);
   const [busqColumna, setBusqColumna] = useState<string>(SKIP);
+  // Carga masiva: hasta dos claves (la segunda es opcional).
+  const [claves, setClaves] = useState<Clave[]>([
+    { campo: SKIP, columna: SKIP },
+    { campo: SKIP, columna: SKIP },
+  ]);
   const [mapeo, setMapeo] = useState<Record<string, string>>({});
 
   const [resultado, setResultado] = useState<ImportMapeoResultado | null>(null);
   const [selDiffs, setSelDiffs] = useState<Set<string>>(new Set());
   const [selObsoletos, setSelObsoletos] = useState<Set<string>>(new Set());
+  const [selAltas, setSelAltas] = useState<Set<string>>(new Set());
 
   // Clave de búsqueda: cualquier campo visible, salvo el ID automático.
   const camposBusqueda = campos.filter((c) => !c.sintetica);
-  // Datos a actualizar: solo parámetros (nunca la clave ni el ID).
+  // Datos a actualizar (actualización): solo parámetros, nunca la clave ni el ID.
   const camposDatos = campos.filter((c) => c.rol === "parametro" && !c.sintetica);
+  // Campos que se eligen como clave en la carga, y los que el archivo puede traer.
+  const clavesCampos = modo === "carga"
+    ? claves.map((k) => k.campo).filter((c) => c !== SKIP)
+    : [busqCampo];
+  const camposDatosModo = modo === "carga"
+    ? camposBusqueda.filter((c) => !clavesCampos.includes(c.nombre_interno))
+    : camposDatos.filter((c) => c.nombre_interno !== busqCampo);
   const titulo = (nombreInterno: string) =>
     campos.find((c) => c.nombre_interno === nombreInterno)?.titulo_ui ?? nombreInterno;
 
-  /** Columnas ya usadas por OTRA parte del mapeo (la clave o un dato distinto a `parte`). */
+  /** Columnas ya usadas por OTRA parte del mapeo (una clave o un dato distinto a `parte`). */
   const columnasUsadasSin = (parte: string): Set<string> => {
     const usadas = new Set<string>();
-    if (parte !== BUSQUEDA && busqColumna) usadas.add(busqColumna);
+    if (modo === "carga") {
+      claves.forEach((k, i) => {
+        if (`${CLAVE}${i}` !== parte && k.columna) usadas.add(k.columna);
+      });
+    } else if (parte !== BUSQUEDA && busqColumna) {
+      usadas.add(busqColumna);
+    }
     for (const [k, v] of Object.entries(mapeo)) {
       if (k !== parte && v) usadas.add(v);
     }
@@ -83,9 +110,21 @@ export default function ImportarDialog({
     sugerencia_busqueda: { campo: string | null; columna: string | null };
   };
   const aplicarSugerencias = (r: Sugerencias) => {
+    // La carga arranca vacía: las claves las elige el operario.
+    if (modo === "carga") return;
     setBusqCampo(r.sugerencia_busqueda.campo ?? SKIP);
     setBusqColumna(r.sugerencia_busqueda.columna ?? SKIP);
     setMapeo(Object.fromEntries(camposDatos.map((c) => [c.nombre_interno, r.sugerencia[c.nombre_interno] ?? SKIP])));
+  };
+
+  const setClave = (i: number, parte: "campo" | "columna", valor: string) =>
+    setClaves((cs) => cs.map((k, j) => (j === i ? { ...k, [parte]: valor } : k)));
+
+  // -- paso 0: elegir modo ----------------------------------------------------
+  const elegirModo = (m: Modo) => {
+    setModo(m);
+    setError(null);
+    setFase("elegir_archivo");
   };
 
   // -- paso 1: elegir archivo --------------------------------------------------
@@ -128,25 +167,42 @@ export default function ImportarDialog({
   };
 
   // -- paso 3: clave de búsqueda + datos -------------------------------------
-  const puedeContinuarMapeo = busqCampo !== SKIP && busqColumna !== SKIP;
+  const claveCompleta = (k: Clave) => k.campo !== SKIP && k.columna !== SKIP;
+  const claveVacia = (k: Clave) => k.campo === SKIP && k.columna === SKIP;
+  const puedeContinuarMapeo = modo === "carga"
+    ? claveCompleta(claves[0]) &&
+      (claveVacia(claves[1]) || (claveCompleta(claves[1]) && claves[1].campo !== claves[0].campo))
+    : busqCampo !== SKIP && busqColumna !== SKIP;
 
   const onContinuarMapeo = async () => {
     if (!importId) return;
     setCargando(true);
     setError(null);
-    const mapeoEnviado = Object.fromEntries(
-      Object.entries(mapeo).filter(([k, v]) => v !== SKIP && k !== busqCampo),
-    );
     try {
-      const r = await api.importMapear(
-        machineId,
-        importId,
-        { campo: busqCampo, columna: busqColumna },
-        mapeoEnviado,
-      );
+      let r: ImportMapeoResultado;
+      if (modo === "carga") {
+        const clavesEnviadas = claves
+          .filter(claveCompleta)
+          .map((k) => ({ campo: k.campo, columna: k.columna }));
+        const mapeoCarga = Object.fromEntries(
+          Object.entries(mapeo).filter(([k, v]) => v !== SKIP && !clavesCampos.includes(k)),
+        );
+        r = await api.importMapearCarga(machineId, importId, clavesEnviadas, mapeoCarga);
+      } else {
+        const mapeoEnviado = Object.fromEntries(
+          Object.entries(mapeo).filter(([k, v]) => v !== SKIP && k !== busqCampo),
+        );
+        r = await api.importMapear(
+          machineId,
+          importId,
+          { campo: busqCampo, columna: busqColumna },
+          mapeoEnviado,
+        );
+      }
       setResultado(r);
       setSelDiffs(new Set());
       setSelObsoletos(new Set());
+      setSelAltas(new Set());
       setFase("diff");
     } catch (e) {
       setError(String(e));
@@ -169,15 +225,16 @@ export default function ImportarDialog({
 
   const onAplicar = async () => {
     if (!importId) return;
-    const total = selDiffs.size + selObsoletos.size;
+    const total = selDiffs.size + selObsoletos.size + selAltas.size;
     if (total === 0) {
       await avisar({ titulo: "Sin selección", mensaje: "No marcaste ningún cambio para aplicar." });
       return;
     }
     const partes: string[] = [];
+    if (selAltas.size) partes.push(`${selAltas.size} registro(s) nuevo(s)`);
     if (selDiffs.size) partes.push(`${selDiffs.size} modificación(es)`);
     if (selObsoletos.size) partes.push(`${selObsoletos.size} registro(s) a eliminar`);
-    const ids = [...selDiffs, ...selObsoletos];
+    const ids = [...selAltas, ...selDiffs, ...selObsoletos];
     const preview6 = ids.slice(0, 6).join(", ") + (ids.length > 6 ? " …" : "");
     let mensaje = `¿Aplicar ${partes.join(", ")}?`;
     if (selObsoletos.size)
@@ -195,7 +252,14 @@ export default function ImportarDialog({
     setCargando(true);
     setError(null);
     try {
-      const r = await api.importAplicar(machineId, importId, [...selDiffs], [...selObsoletos], hashEsperado);
+      const r = await api.importAplicar(
+        machineId,
+        importId,
+        [...selDiffs],
+        [...selObsoletos],
+        hashEsperado,
+        [...selAltas],
+      );
       onAplicado(r.hash, r);
       onCerrar();
     } catch (e) {
@@ -207,15 +271,83 @@ export default function ImportarDialog({
 
   // -- render ---------------------------------------------------------------
   const titulos: Record<Fase, string> = {
-    elegir_archivo: "Importar cambios",
+    modo: "Importar datos",
+    elegir_archivo: modo === "carga" ? "Carga masiva" : "Actualización masiva",
     hoja: "Elegí la hoja del Excel",
     mapeo: "Mapear columnas",
     diff: "Revisar cambios",
   };
 
+  /** Fila de una clave: campo del sistema + columna del archivo. */
+  const filaClave = (
+    prefijo: string,
+    campo: string,
+    columna: string,
+    setCampo: (v: string) => void,
+    setColumna: (v: string) => void,
+    usadas: Set<string>,
+    opcional = false,
+  ) => (
+    <>
+      <div className="imp-mapeo-fila">
+        <span className="imp-mapeo-titulo">{prefijo}Campo del sistema</span>
+        <select value={campo} onChange={(e) => setCampo(e.target.value)}>
+          <option value={SKIP}>{opcional ? "— sin segunda clave —" : "— elegí un campo —"}</option>
+          {camposBusqueda.map((c) => (
+            <option key={c.nombre_interno} value={c.nombre_interno}>
+              {c.titulo_ui}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="imp-mapeo-fila">
+        <span className="imp-mapeo-titulo">{prefijo}Columna del archivo</span>
+        <select value={columna} onChange={(e) => setColumna(e.target.value)}>
+          <option value={SKIP}>— elegí una columna —</option>
+          {headers.map((h) => (
+            <option key={h} value={h} disabled={usadas.has(h)}>
+              {h}
+            </option>
+          ))}
+        </select>
+      </div>
+    </>
+  );
+
   return (
     <Modal titulo={titulos[fase]} ancho={720} onCerrar={onCerrar}>
       {error && <p className="error">{error}</p>}
+
+      {fase === "modo" && (
+        <div className="imp-paso">
+          <p className="muted">¿Qué querés hacer con el archivo?</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <div>
+              <Boton tipo="primary" onClick={() => elegirModo("carga")}>
+                Carga masiva
+              </Boton>
+              <p className="muted" style={{ marginTop: "0.25rem" }}>
+                Crea un registro nuevo por cada fila (con ID automático). Si ya existe un registro
+                con las claves elegidas, lo modifica.
+              </p>
+            </div>
+            <div>
+              <Boton tipo="secondary" onClick={() => elegirModo("actualizacion")}>
+                Actualización masiva
+              </Boton>
+              <p className="muted" style={{ marginTop: "0.25rem" }}>
+                Actualiza los registros que ya existen. No crea registros nuevos.
+              </p>
+            </div>
+          </div>
+          <div className="ui-modal__footer" style={{ marginTop: "1.5rem" }}>
+            <span className="ui-modal__footer-sep" />
+            <Boton tipo="secondary" onClick={onCerrar}>
+              Cancelar
+            </Boton>
+          </div>
+        </div>
+      )}
 
       {fase === "elegir_archivo" && (
         <div className="imp-paso">
@@ -265,71 +397,65 @@ export default function ImportarDialog({
 
       {fase === "mapeo" && (
         <div className="imp-paso">
-          <p style={{ fontWeight: 600, marginBottom: "0.25rem" }}>1. Clave de búsqueda</p>
-          <p className="muted">
-            Código que identifica cada registro (número o sellado). Cada fila del archivo se
-            busca por este valor. Es obligatoria.
-          </p>
-          <div className="imp-mapeo">
-            <div className="imp-mapeo-fila">
-              <span className="imp-mapeo-titulo">Campo del sistema</span>
-              <select
-                value={busqCampo}
-                onChange={(e) => setBusqCampo(e.target.value)}
-              >
-                <option value={SKIP}>— elegí un campo —</option>
-                {camposBusqueda.map((c) => (
-                  <option key={c.nombre_interno} value={c.nombre_interno}>
-                    {c.titulo_ui}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="imp-mapeo-fila">
-              <span className="imp-mapeo-titulo">Columna del archivo</span>
-              <select
-                value={busqColumna}
-                onChange={(e) => setBusqColumna(e.target.value)}
-              >
-                <option value={SKIP}>— elegí una columna —</option>
-                {headers.map((h) => (
-                  <option key={h} value={h} disabled={columnasUsadasSin(BUSQUEDA).has(h)}>
-                    {h}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+          {modo === "carga" ? (
+            <>
+              <p style={{ fontWeight: 600, marginBottom: "0.25rem" }}>1. Claves de búsqueda</p>
+              <p className="muted">
+                Campos que identifican cada registro (por ejemplo amortiguador y número de sellado).
+                Elegí una o dos; la segunda es opcional. Si la fila ya existe en el sistema con esas
+                claves, se modifica; si no, se crea un registro nuevo.
+              </p>
+              <div className="imp-mapeo">
+                {filaClave("Clave 1 · ", claves[0].campo, claves[0].columna,
+                  (v) => setClave(0, "campo", v), (v) => setClave(0, "columna", v),
+                  columnasUsadasSin(`${CLAVE}0`))}
+                {filaClave("Clave 2 · ", claves[1].campo, claves[1].columna,
+                  (v) => setClave(1, "campo", v), (v) => setClave(1, "columna", v),
+                  columnasUsadasSin(`${CLAVE}1`), true)}
+              </div>
+            </>
+          ) : (
+            <>
+              <p style={{ fontWeight: 600, marginBottom: "0.25rem" }}>1. Clave de búsqueda</p>
+              <p className="muted">
+                Código que identifica cada registro (número o sellado). Cada fila del archivo se
+                busca por este valor. Es obligatoria.
+              </p>
+              <div className="imp-mapeo">
+                {filaClave("", busqCampo, busqColumna, setBusqCampo, setBusqColumna,
+                  columnasUsadasSin(BUSQUEDA))}
+              </div>
+            </>
+          )}
 
-          <p style={{ fontWeight: 600, margin: "1.25rem 0 0.25rem" }}>2. Datos a actualizar</p>
+          <p style={{ fontWeight: 600, margin: "1.25rem 0 0.25rem" }}>2. Datos</p>
           <p className="muted">
-            Indicá qué columna del archivo corresponde a cada dato. Si la celda del archivo está
-            vacía, el dato actual no se toca. Dejá «no importar» en los que el archivo no trae.
+            {modo === "carga"
+              ? "Indicá qué columna del archivo corresponde a cada dato del registro. Las celdas vacías quedan en 0 (numéricos) o Null (texto). Dejá «no importar» en los que el archivo no trae."
+              : "Indicá qué columna del archivo corresponde a cada dato. Si la celda del archivo está vacía, el dato actual no se toca. Dejá «no importar» en los que el archivo no trae."}
           </p>
           <div className="imp-mapeo">
-            {camposDatos
-              .filter((c) => c.nombre_interno !== busqCampo)
-              .map((c) => {
-                const usadas = columnasUsadasSin(c.nombre_interno);
-                return (
-                  <div className="imp-mapeo-fila" key={c.nombre_interno}>
-                    <span className="imp-mapeo-titulo">{c.titulo_ui}</span>
-                    <select
-                      value={mapeo[c.nombre_interno] ?? SKIP}
-                      onChange={(e) =>
-                        setMapeo((m) => ({ ...m, [c.nombre_interno]: e.target.value }))
-                      }
-                    >
-                      <option value={SKIP}>— no importar —</option>
-                      {headers.map((h) => (
-                        <option key={h} value={h} disabled={usadas.has(h)}>
-                          {h}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                );
-              })}
+            {camposDatosModo.map((c) => {
+              const usadas = columnasUsadasSin(c.nombre_interno);
+              return (
+                <div className="imp-mapeo-fila" key={c.nombre_interno}>
+                  <span className="imp-mapeo-titulo">{c.titulo_ui}</span>
+                  <select
+                    value={mapeo[c.nombre_interno] ?? SKIP}
+                    onChange={(e) =>
+                      setMapeo((m) => ({ ...m, [c.nombre_interno]: e.target.value }))
+                    }
+                  >
+                    <option value={SKIP}>— no importar —</option>
+                    {headers.map((h) => (
+                      <option key={h} value={h} disabled={usadas.has(h)}>
+                        {h}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              );
+            })}
           </div>
 
           {preview.length > 0 && (
@@ -382,8 +508,10 @@ export default function ImportarDialog({
             resultado={resultado}
             selDiffs={selDiffs}
             selObsoletos={selObsoletos}
+            selAltas={selAltas}
             setSelDiffs={setSelDiffs}
             setSelObsoletos={setSelObsoletos}
+            setSelAltas={setSelAltas}
             alternarEn={alternarEn}
             setAll={setAll}
             titulo={titulo}
@@ -407,8 +535,10 @@ function SeccionDiffs({
   resultado,
   selDiffs,
   selObsoletos,
+  selAltas,
   setSelDiffs,
   setSelObsoletos,
+  setSelAltas,
   alternarEn,
   setAll,
   titulo,
@@ -416,23 +546,27 @@ function SeccionDiffs({
   resultado: ImportMapeoResultado;
   selDiffs: Set<string>;
   selObsoletos: Set<string>;
+  selAltas: Set<string>;
   setSelDiffs: (v: Set<string>) => void;
   setSelObsoletos: (v: Set<string>) => void;
+  setSelAltas: (v: Set<string>) => void;
   alternarEn: (set: Set<string>, setSel: (v: Set<string>) => void, id: string) => void;
   setAll: (items: { id: string; errores?: unknown[] }[], setSel: (v: Set<string>) => void, value: boolean) => void;
   titulo: (nombreInterno: string) => string;
 }) {
-  const { diffs, conflictos, sin_coincidencia, obsoletos, sin_cambios, filas_sin_clave } = resultado;
-  const nInvalidos = diffs.filter((d) => d.errores.length).length;
+  const { diffs, altas, conflictos, sin_coincidencia, obsoletos, sin_cambios, filas_sin_clave } = resultado;
+  const nInvalidos = diffs.filter((d) => d.errores.length).length + altas.filter((a) => a.errores.length).length;
 
-  const partes = [`${diffs.length} con diferencias`];
+  const partes: string[] = [];
+  if (altas.length) partes.push(`${altas.length} nuevo(s) para crear`);
+  partes.push(`${diffs.length} con diferencias`);
   if (sin_cambios) partes.push(`${sin_cambios} sin cambios`);
   if (sin_coincidencia.length) partes.push(`${sin_coincidencia.length} sin coincidencia`);
   if (conflictos.length) partes.push(`${conflictos.length} con conflicto`);
   if (obsoletos.length) partes.push(`${obsoletos.length} en el sistema y no en el archivo`);
   if (filas_sin_clave) partes.push(`${filas_sin_clave} fila(s) sin clave`);
 
-  const hayAlgo = diffs.length || conflictos.length || sin_coincidencia.length || obsoletos.length;
+  const hayAlgo = altas.length || diffs.length || conflictos.length || sin_coincidencia.length || obsoletos.length;
   if (!hayAlgo) {
     return <p>No hay cambios para revisar.</p>;
   }
@@ -445,6 +579,41 @@ function SeccionDiffs({
           ⚠ {nInvalidos} valor(es) fuera de rango — no se pueden importar hasta corregir el
           archivo (marcados abajo).
         </p>
+      )}
+
+      {altas.length > 0 && (
+        <section className="imp-seccion">
+          <SeccionHeader
+            titulo="Registros nuevos (se crean)"
+            color="var(--primary-dark)"
+            onTodos={() => setAll(altas, setSelAltas, true)}
+            onNinguno={() => setAll(altas, setSelAltas, false)}
+          />
+          {altas.map((a: ImportAlta) => (
+            <div key={a.id} className={"imp-card" + (a.errores.length ? " imp-card--invalido" : "")}>
+              <label className="imp-card-head">
+                <input
+                  type="checkbox"
+                  checked={selAltas.has(a.id)}
+                  disabled={a.errores.length > 0}
+                  onChange={() => alternarEn(selAltas, setSelAltas, a.id)}
+                />
+                <strong>{a.busqueda}</strong>
+              </label>
+              {Object.entries(a.new).map(([campo, valor]) => (
+                <div className="imp-card-fila" key={campo}>
+                  <span className="imp-card-campo">{titulo(campo)}</span>
+                  <span>{valor == null ? "Null (vacío)" : String(valor)}</span>
+                </div>
+              ))}
+              {a.errores.map((err, i) => (
+                <p className="error" key={i}>
+                  ⚠ {err.mensaje}
+                </p>
+              ))}
+            </div>
+          ))}
+        </section>
       )}
 
       {diffs.length > 0 && (

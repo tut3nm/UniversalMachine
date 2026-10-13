@@ -50,6 +50,26 @@ def indice_por_busqueda(store: DataStore, profile: Profile, campo: str) -> dict[
     return indice
 
 
+SEPARADOR_CLAVE = " · "
+
+
+def clave_compuesta(partes: list[str]) -> str:
+    """Une los valores canónicos de una clave de 1 o 2 campos (carga masiva)."""
+    return SEPARADOR_CLAVE.join(partes)
+
+
+def indice_por_claves(store: DataStore, profile: Profile, campos: list[str]) -> dict[str, list[int]]:
+    """{clave compuesta: [índices de registros]} para una clave de uno o dos
+    campos. Un registro sin valor en alguno de los campos no se indexa."""
+    tipos = [profile.campo_por_nombre(c).tipo for c in campos]
+    indice: dict[str, list[int]] = {}
+    for i, rec in enumerate(store.records):
+        partes = [clave_busqueda(rec.get(c), t) for c, t in zip(campos, tipos)]
+        if all(partes):
+            indice.setdefault(clave_compuesta(partes), []).append(i)
+    return indice
+
+
 def _es_placeholder(profile: Profile, rec: dict, campo: str) -> bool:
     rx = profile.placeholder_regex()
     if not rx:
